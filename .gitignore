@@ -1,0 +1,6 @@
+bin/
+obj/
+/esf-format/
+/artifacts/
+/coverage/
+TestResults/
