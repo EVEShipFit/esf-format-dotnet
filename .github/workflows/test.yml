@@ -63,10 +63,10 @@ jobs:
         run: uv run --project esf-format/tools esf-test -- dotnet tests/EsfFormat.Program/bin/Release/net${{ matrix.dotnet }}/esf-program.dll
 
       - name: Run the unit tests
-        run: dotnet test --project tests/EsfFormat.Tests -f net${{ matrix.dotnet }} --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
+        run: dotnet test --project tests/EsfFormat.Tests -f net${{ matrix.dotnet }} --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml --results-directory TestResults
 
       - name: Report coverage
         run: |
-          dotnet reportgenerator -reports:"tests/EsfFormat.Tests/bin/*/*/TestResults/coverage.cobertura.xml" -targetdir:coverage -reporttypes:"TextSummary;MarkdownSummaryGithub" -filefilters:"-**/obj/**"
+          dotnet reportgenerator -reports:TestResults/coverage.cobertura.xml -targetdir:coverage -reporttypes:"TextSummary;MarkdownSummaryGithub" -filefilters:"-**/obj/**"
           cat coverage/Summary.txt
           cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
