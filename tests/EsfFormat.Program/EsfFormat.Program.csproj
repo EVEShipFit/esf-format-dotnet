@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <AssemblyName>esf-program</AssemblyName>
+    <RootNamespace>EveShipFit.EsfFormat.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/EsfFormat/EsfFormat.csproj" />
+    <Compile Include="../EsfFormat.Tests/JsonCatalog.cs" />
+  </ItemGroup>
+
+</Project>

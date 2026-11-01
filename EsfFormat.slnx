@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EsfFormat/EsfFormat.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EsfFormat.Program/EsfFormat.Program.csproj" />
+    <Project Path="tests/EsfFormat.Tests/EsfFormat.Tests.csproj" />
+  </Folder>
+</Solution>

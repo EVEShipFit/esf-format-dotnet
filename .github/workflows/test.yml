@@ -1,0 +1,72 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Lint
+        run: dotnet format --verify-no-changes
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Pack
+        run: dotnet pack src/EsfFormat -c Release -o artifacts
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dotnet: ["8.0", "10.0"]
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Check out esf-format
+        uses: actions/checkout@v7
+        with:
+          repository: EVEShipFit/esf-format
+          ref: v1.0
+          path: esf-format
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: ${{ matrix.dotnet }}.x
+          global-json-file: global.json
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.3.3
+
+      - name: Install dependencies
+        run: dotnet tool restore
+
+      - name: Build the test program
+        run: dotnet build tests/EsfFormat.Program -c Release -f net${{ matrix.dotnet }}
+
+      - name: Run the test cases
+        run: uv run --project esf-format/tools esf-test -- dotnet tests/EsfFormat.Program/bin/Release/net${{ matrix.dotnet }}/esf-program.dll
+
+      - name: Run the unit tests
+        run: dotnet test --project tests/EsfFormat.Tests -f net${{ matrix.dotnet }} --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml --results-directory TestResults
+
+      - name: Report coverage
+        run: |
+          dotnet reportgenerator -reports:TestResults/coverage.cobertura.xml -targetdir:coverage -reporttypes:"TextSummary;MarkdownSummaryGithub" -filefilters:"-**/obj/**"
+          cat coverage/Summary.txt
+          cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
