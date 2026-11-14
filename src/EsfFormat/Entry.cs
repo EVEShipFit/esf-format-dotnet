@@ -5,7 +5,8 @@ namespace EveShipFit.EsfFormat;
 /// <summary>One line of a fit: an item, an empty slot, or another fit carried by this one.</summary>
 /// <remarks>
 /// Only <see cref="Type"/> is needed; every other property is <see langword="null"/> or empty when it is the default.
-/// Entries can be in any order, except within a rack: there, the order is the slot order.
+/// Entries can be in any order, except within a rack: there, the order is the slot order,
+/// unless an entry sets <see cref="Slot"/>.
 /// </remarks>
 /// <param name="Type">
 /// The type ID of the item, like 2889 for a 200mm AutoCannon II.
@@ -73,6 +74,14 @@ public sealed record Entry(int? Type)
     /// </summary>
     public Location? Location { get; init; }
 
+    /// <summary>The slot in the <see cref="Location"/> rack, counting from 1, like 3 for the third high slot.</summary>
+    /// <remarks>
+    /// Set <see cref="Location"/> to the rack too. <see langword="null"/> means the next free slot.
+    /// <see cref="Esf.Load(string, ICatalog)"/> never sets this: it gives the rack in slot order, with empty slots
+    /// in between.
+    /// </remarks>
+    public long? Slot { get; init; }
+
     public bool Equals(Entry? other) =>
         other is not null
         && Type == other.Type
@@ -83,9 +92,10 @@ public sealed record Entry(int? Type)
         && Mutaplasmid == other.Mutaplasmid
         && State == other.State
         && Location == other.Location
+        && Slot == other.Slot
         && Overrides.Count == other.Overrides.Count
         && Overrides.All(o => other.Overrides.TryGetValue(o.Key, out var value) && value.Equals(o.Value));
 
     public override int GetHashCode() =>
-        HashCode.Combine(Type, Count, FitName, Charge, ChargeCount, Mutaplasmid, State, Location);
+        HashCode.Combine(HashCode.Combine(Type, Count, FitName, Charge, ChargeCount, Mutaplasmid, State, Location), Slot);
 }

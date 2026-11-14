@@ -132,9 +132,18 @@ internal static class Source
         {
             throw new EsfException("a count must be at least 1");
         }
-        if (e.Type is not null && e.Location is { } location && location.ToPlace().IsRack())
+        if (e.Slot < 1)
         {
-            throw new EsfException("a rack location is only for an empty slot");
+            throw new EsfException("a slot must be at least 1");
+        }
+        var rack = e.Location is { } location && location.ToPlace().IsRack();
+        if (e.Slot is not null && !rack)
+        {
+            throw new EsfException("a slot needs the rack it is in");
+        }
+        if (e.Type is not null && e.Slot is null && rack)
+        {
+            throw new EsfException("an item names a rack only to pin a slot");
         }
         if (e.ChargeCount is not null && e.Charge is null)
         {
@@ -174,6 +183,10 @@ internal static class Source
         if (e.Location is { } at)
         {
             text.Append(" @").Append(at.Name());
+            if (e.Slot is { } slot)
+            {
+                text.Append(CultureInfo.InvariantCulture, $"{slot}");
+            }
         }
         text.Append('\n');
     }
