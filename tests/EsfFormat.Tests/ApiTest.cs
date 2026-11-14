@@ -50,6 +50,41 @@ public class ApiTest
     }
 
     [Fact]
+    public void SaveSlots()
+    {
+        var pinned = Fit(
+            new Entry(Autocannon),
+            new Entry(Autocannon) { Location = Location.High, Slot = 3 },
+            new Entry(null) { Location = Location.Low, Slot = 1 },
+            new Entry(DamageControl));
+        var text = Esf.Save([pinned], Catalog);
+        Assert.Equal(
+            """
+            %esf/1
+            Rifter
+
+            200mm AutoCannon II
+            - @high
+            200mm AutoCannon II
+
+            - @low
+            Damage Control II
+
+            """.ReplaceLineEndings("\n"),
+            text);
+        Assert.Equal(
+            [
+                new Entry(Autocannon),
+                new Entry(null) { Location = Location.High },
+                new Entry(Autocannon),
+                new Entry(null) { Location = Location.Low },
+                new Entry(DamageControl),
+            ],
+            Esf.Load(text, Catalog).Single().Entries);
+        Assert.Equal(Esf.Load(text, Catalog), Esf.Load(Esf.SaveBinary([pinned], Catalog), Catalog));
+    }
+
+    [Fact]
     public void LoadText() =>
         Assert.Equal([new EsfFit { Hull = Rifter }], Esf.Load("%esf/1\nRifter\n", Catalog));
 
@@ -96,7 +131,35 @@ public class ApiTest
             [Fit(new Entry(DamageControl) { Overrides = new Dictionary<int, double> { [999_999] = 1 } })],
             "unknown attribute ID"
         },
-        { "rack-on-item", [Fit(new Entry(Autocannon) { Location = Location.High })], "only for an empty slot" },
+        { "rack-on-item", [Fit(new Entry(Autocannon) { Location = Location.High })], "only to pin a slot" },
+        { "slot-zero", [Fit(new Entry(Autocannon) { Location = Location.High, Slot = 0 })], "at least 1" },
+        { "slot-without-rack", [Fit(new Entry(Autocannon) { Slot = 1 })], "needs the rack" },
+        { "empty-slot-without-rack", [Fit(new Entry(null) { Slot = 1 })], "needs the rack" },
+        {
+            "slot-with-count",
+            [Fit(new Entry(Autocannon) { Count = 2, Location = Location.High, Slot = 1 })],
+            "mutually exclusive"
+        },
+        {
+            "empty-slot-with-count",
+            [Fit(new Entry(null) { Count = 2, Location = Location.High, Slot = 1 })],
+            "mutually exclusive"
+        },
+        {
+            "slot-wrong-rack",
+            [Fit(new Entry(Autocannon) { Location = Location.Low, Slot = 1 })],
+            "does not go in the low rack"
+        },
+        { "slot-on-hold", [Fit(new Entry(Emp) { Location = Location.Cargo, Slot = 1 })], "needs the rack" },
+        {
+            "slot-twice",
+            [
+                Fit(
+                    new Entry(Autocannon) { Location = Location.High, Slot = 1 },
+                    new Entry(Autocannon) { Location = Location.High, Slot = 1 })
+            ],
+            "pinned twice"
+        },
         { "charge-count-alone", [Fit(new Entry(Autocannon) { ChargeCount = 10 })], "without a charge" },
         {
             "override-nan",
@@ -308,6 +371,7 @@ public class ApiTest
         Assert.NotEqual(entry, same with { Overrides = new Dictionary<int, double> { [50] = 1 } });
         Assert.NotEqual(entry, same with { Overrides = new Dictionary<int, double> { [50] = 1, [975] = 2 } });
         Assert.NotEqual(entry, same with { State = State.Off });
+        Assert.NotEqual(same with { Location = Location.High }, same with { Location = Location.High, Slot = 1 });
         Assert.False(entry.Equals(null));
 
         var fit = Fit(entry);

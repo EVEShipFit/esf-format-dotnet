@@ -7,29 +7,30 @@ namespace EveShipFit.EsfFormat;
 /// Set it to store an item somewhere else, like a spare Damage Control II in <see cref="Cargo"/>.
 /// </para>
 /// <para>
-/// The racks, <see cref="High"/> to <see cref="Svc"/>, are only for empty slots. An item never names its rack.
+/// The racks, <see cref="High"/> to <see cref="Svc"/>, are for empty slots, and for an item put in a given
+/// <see cref="Entry.Slot"/>. Otherwise, an item never names its rack.
 /// The holds, <see cref="Ammo"/> to <see cref="Subsystem"/>, only make sense on a hull that has that hold, but the
 /// library does not check that.
 /// </para>
 /// </remarks>
 public enum Location
 {
-    /// <summary>The high slot rack, for an empty slot.</summary>
+    /// <summary>The high slot rack.</summary>
     High = 1,
 
-    /// <summary>The mid slot rack, for an empty slot.</summary>
+    /// <summary>The mid slot rack.</summary>
     Mid = 2,
 
-    /// <summary>The low slot rack, for an empty slot.</summary>
+    /// <summary>The low slot rack.</summary>
     Low = 3,
 
-    /// <summary>The rig rack, for an empty slot.</summary>
+    /// <summary>The rig rack.</summary>
     Rig = 4,
 
-    /// <summary>The subsystem rack, for an empty slot. Not the same as <see cref="Subsystem"/>, which is a hold.</summary>
+    /// <summary>The subsystem rack. Not the same as <see cref="Subsystem"/>, which is a hold.</summary>
     Sub = 5,
 
-    /// <summary>The structure service rack, for an empty slot.</summary>
+    /// <summary>The structure service rack.</summary>
     Svc = 6,
 
     /// <summary>The cargo hold.</summary>
