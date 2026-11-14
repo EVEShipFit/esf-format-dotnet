@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using EveShipFit.EsfFormat;
 
@@ -45,9 +48,11 @@ public sealed class SdeJsonlCatalog : ICatalog
         foreach (var row in Rows("typeDogma.jsonl"))
         {
             var effects = Array(row, "dogmaEffects").Select(e => e.GetProperty("effectID").GetInt32()).ToList();
-            var values = Array(row, "dogmaAttributes").ToDictionary(
-                a => a.GetProperty("attributeID").GetInt32(),
-                a => a.GetProperty("value").GetDouble());
+            var values = new Dictionary<int, double>();
+            foreach (var a in Array(row, "dogmaAttributes"))
+            {
+                values[a.GetProperty("attributeID").GetInt32()] = a.GetProperty("value").GetDouble();
+            }
             dogma[Key(row)] = new Dogma(
                 effects,
                 Sde.SquadronSize(values),

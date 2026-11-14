@@ -10,8 +10,8 @@ namespace EveShipFit.EsfFormat;
 /// than a lookup.
 /// </para>
 /// <para>
-/// The § numbers point to sections of the esf/1 spec:
-/// https://github.com/EVEShipFit/esf-format/blob/main/SPEC.md
+/// The § numbers point to sections of the
+/// <see href="https://github.com/EVEShipFit/esf-format/blob/main/SPEC.md">esf/1 spec</see>.
 /// </para>
 /// </remarks>
 public interface ICatalog
