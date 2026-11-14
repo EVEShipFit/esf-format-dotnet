@@ -7,8 +7,8 @@ public sealed class JsonCatalog : ICatalog
 {
     private readonly Dictionary<int, TypeRecord> types = [];
     private readonly Dictionary<int, AttributeRecord> attributes = [];
-    private readonly Dictionary<string, int> typeNames;
-    private readonly Dictionary<string, int> attributeNames;
+    private readonly IReadOnlyDictionary<string, int> typeNames;
+    private readonly IReadOnlyDictionary<string, int> attributeNames;
     private readonly Dictionary<int, List<TypeRecord>> modes = [];
     private readonly Dictionary<int, List<MutaplasmidRecord>> mutaplasmids = [];
 
@@ -33,8 +33,8 @@ public sealed class JsonCatalog : ICatalog
             var id = a.GetProperty("id").GetInt32();
             attributes[id] = new AttributeRecord(id, a.GetProperty("name").GetString()!);
         }
-        typeNames = ByName(root.GetProperty("types"));
-        attributeNames = ByName(root.GetProperty("attributes"));
+        typeNames = NameIndex(root.GetProperty("types"));
+        attributeNames = NameIndex(root.GetProperty("attributes"));
         foreach (var m in root.GetProperty("modes").EnumerateArray())
         {
             modes[m.GetProperty("hull").GetInt32()] =
@@ -55,13 +55,13 @@ public sealed class JsonCatalog : ICatalog
         }
     }
 
-    public TypeRecord? TypeByName(string folded) =>
-        typeNames.TryGetValue(folded, out var id) ? types[id] : null;
+    public TypeRecord? TypeByName(string foldedName) =>
+        typeNames.TryGetValue(foldedName, out var id) ? types[id] : null;
 
     public TypeRecord? TypeById(int typeId) => types.GetValueOrDefault(typeId);
 
-    public AttributeRecord? AttributeByName(string folded) =>
-        attributeNames.TryGetValue(folded, out var id) ? attributes[id] : null;
+    public AttributeRecord? AttributeByName(string foldedName) =>
+        attributeNames.TryGetValue(foldedName, out var id) ? attributes[id] : null;
 
     public AttributeRecord? AttributeById(int attributeId) => attributes.GetValueOrDefault(attributeId);
 
@@ -69,17 +69,10 @@ public sealed class JsonCatalog : ICatalog
 
     public IReadOnlyList<MutaplasmidRecord> Mutaplasmids(int typeId) => mutaplasmids.GetValueOrDefault(typeId) ?? [];
 
-    /// <summary>Where names are shared, published wins, then the lowest ID (§4.2).</summary>
-    private static Dictionary<string, int> ByName(JsonElement entries)
-    {
-        var index = new Dictionary<string, int>();
-        var sorted = entries.EnumerateArray()
-            .OrderBy(e => !e.GetProperty("published").GetBoolean())
-            .ThenBy(e => e.GetProperty("id").GetInt32());
-        foreach (var e in sorted)
-        {
-            index.TryAdd(Esf.Fold(e.GetProperty("name").GetString()!), e.GetProperty("id").GetInt32());
-        }
-        return index;
-    }
+    private static IReadOnlyDictionary<string, int> NameIndex(JsonElement entries) =>
+        Sde.NameIndex(
+            entries.EnumerateArray(),
+            e => e.GetProperty("id").GetInt32(),
+            e => e.GetProperty("name").GetString()!,
+            e => e.GetProperty("published").GetBoolean());
 }

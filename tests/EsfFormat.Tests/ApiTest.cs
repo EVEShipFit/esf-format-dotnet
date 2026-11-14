@@ -351,11 +351,11 @@ internal class MinimalCatalog(ICatalog catalog) : ICatalog
 {
     protected ICatalog Inner { get; } = catalog;
 
-    public TypeRecord? TypeByName(string folded) => Inner.TypeByName(folded);
+    public TypeRecord? TypeByName(string foldedName) => Inner.TypeByName(foldedName);
 
     public TypeRecord? TypeById(int typeId) => Inner.TypeById(typeId);
 
-    public AttributeRecord? AttributeByName(string folded) => Inner.AttributeByName(folded);
+    public AttributeRecord? AttributeByName(string foldedName) => Inner.AttributeByName(foldedName);
 
     public virtual AttributeRecord? AttributeById(int attributeId) => Inner.AttributeById(attributeId);
 }
@@ -370,11 +370,11 @@ internal sealed class CatalogWithoutRollAttributes(ICatalog catalog) : MinimalCa
 /// <summary>A Catalog where one attribute ID has the name of another.</summary>
 internal sealed class RenamedAttribute(ICatalog catalog, int id, string name) : ICatalog
 {
-    public TypeRecord? TypeByName(string folded) => catalog.TypeByName(folded);
+    public TypeRecord? TypeByName(string foldedName) => catalog.TypeByName(foldedName);
 
     public TypeRecord? TypeById(int typeId) => catalog.TypeById(typeId);
 
-    public AttributeRecord? AttributeByName(string folded) => catalog.AttributeByName(folded);
+    public AttributeRecord? AttributeByName(string foldedName) => catalog.AttributeByName(foldedName);
 
     public AttributeRecord? AttributeById(int attributeId) =>
         attributeId == id ? new AttributeRecord(id, name) : catalog.AttributeById(attributeId);

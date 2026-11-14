@@ -20,3 +20,6 @@ dotnet_diagnostic.IDE0161.severity = warning
 
 [src/EsfFormat/Internal/CaseFolding.Table.cs]
 generated_code = true
+
+[examples/*.cs]
+dotnet_diagnostic.IDE0005.severity = none

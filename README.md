@@ -76,9 +76,9 @@ looks up types and attributes in your copy of the SDE.
 ```csharp
 public sealed class MyCatalog : ICatalog
 {
-    public TypeRecord? TypeByName(string folded) => ...;
+    public TypeRecord? TypeByName(string foldedName) => ...;
     public TypeRecord? TypeById(int typeId) => ...;
-    public AttributeRecord? AttributeByName(string folded) => ...;
+    public AttributeRecord? AttributeByName(string foldedName) => ...;
     public AttributeRecord? AttributeById(int attributeId) => ...;
 
     // Optional. Without them, no hull has tactical modes and no type has mutaplasmids.
@@ -87,10 +87,26 @@ public sealed class MyCatalog : ICatalog
 }
 ```
 
-Names are looked up folded: index them with `Esf.Fold(name)`. Where
-names are shared, published wins, then the lowest ID (§4.2).
-[tests/EsfFormat.Tests/JsonCatalog.cs](https://github.com/EVEShipFit/esf-format-dotnet/blob/main/tests/EsfFormat.Tests/JsonCatalog.cs)
-is a complete example.
+Each method and property says what to return and where in the SDE it comes
+from. `Sde` has helpers for the parts that take more than a lookup:
+
+```csharp
+var typeNames = Sde.NameIndex(types, t => t.Id, t => t.Name.En, t => t.Published);
+
+// effects: effectID -> effectCategoryID; attributes: attributeID -> value
+
+new TypeRecord(
+    t.Id,
+    t.Name.En,
+    Sde.Kind(group.CategoryId, t.GroupId, effects.Keys),
+    Sde.Active(effects),
+    t.Capacity ?? 0,
+    t.Volume ?? 0,
+    Sde.SquadronSize(attributes));
+```
+
+[examples/SdeJsonlCatalog.cs](https://github.com/EVEShipFit/esf-format-dotnet/blob/main/examples/SdeJsonlCatalog.cs)
+is a complete example on the official SDE in JSONL: copy it into your project.
 
 ## Tests
 
