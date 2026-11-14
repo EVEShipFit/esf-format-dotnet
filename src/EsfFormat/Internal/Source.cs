@@ -132,7 +132,7 @@ internal static class Source
         {
             throw new EsfException("a count must be at least 1");
         }
-        if (e.Slot < 1)
+        if (e.Slot == 0)
         {
             throw new EsfException("a slot must be at least 1");
         }

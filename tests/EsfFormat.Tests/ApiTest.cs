@@ -81,6 +81,7 @@ public class ApiTest
                 new Entry(DamageControl),
             ],
             Esf.Load(text, Catalog).Single().Entries);
+        Assert.Equal(Esf.Load(text, Catalog), Esf.Load(Esf.SaveBinary([pinned], Catalog), Catalog));
     }
 
     [Fact]
@@ -132,11 +133,16 @@ public class ApiTest
         },
         { "rack-on-item", [Fit(new Entry(Autocannon) { Location = Location.High })], "only to pin a slot" },
         { "slot-zero", [Fit(new Entry(Autocannon) { Location = Location.High, Slot = 0 })], "at least 1" },
-        { "slot-negative", [Fit(new Entry(Autocannon) { Location = Location.High, Slot = -1 })], "at least 1" },
         { "slot-without-rack", [Fit(new Entry(Autocannon) { Slot = 1 })], "needs the rack" },
+        { "empty-slot-without-rack", [Fit(new Entry(null) { Slot = 1 })], "needs the rack" },
         {
             "slot-with-count",
             [Fit(new Entry(Autocannon) { Count = 2, Location = Location.High, Slot = 1 })],
+            "mutually exclusive"
+        },
+        {
+            "empty-slot-with-count",
+            [Fit(new Entry(null) { Count = 2, Location = Location.High, Slot = 1 })],
             "mutually exclusive"
         },
         {
@@ -154,7 +160,6 @@ public class ApiTest
             ],
             "pinned twice"
         },
-        { "slot-too-large", [Fit(new Entry(Autocannon) { Location = Location.High, Slot = 4_294_967_296 })], "too large" },
         { "charge-count-alone", [Fit(new Entry(Autocannon) { ChargeCount = 10 })], "without a charge" },
         {
             "override-nan",

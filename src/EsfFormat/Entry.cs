@@ -76,11 +76,12 @@ public sealed record Entry(int? Type)
 
     /// <summary>The slot in the <see cref="Location"/> rack, counting from 1, like 3 for the third high slot.</summary>
     /// <remarks>
-    /// Set <see cref="Location"/> to the rack too. <see langword="null"/> means the next free slot.
-    /// <see cref="Esf.Load(string, ICatalog)"/> never sets this: it gives the rack in slot order, with empty slots
-    /// in between.
+    /// Set <see cref="Location"/> to the rack too, and the item must go in that rack.
+    /// <see langword="null"/> means the next free slot. A slot cannot be combined with <see cref="Count"/>,
+    /// and each slot in a rack can be pinned once.
+    /// Loading a fit never sets this: it gives the rack in slot order, with empty slots in between.
     /// </remarks>
-    public long? Slot { get; init; }
+    public uint? Slot { get; init; }
 
     public bool Equals(Entry? other) =>
         other is not null
