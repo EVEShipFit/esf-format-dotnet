@@ -106,15 +106,18 @@ internal static class Source
         return Canonical.Quote(text);
     }
 
-    private static string TypeName(ICatalog catalog, int typeId, string what)
-    {
-        var type = catalog.TypeById(typeId) ?? throw new EsfCatalogException($"unknown {what} type ID {typeId}");
-        return Canonical.QuoteType(type.Name);
-    }
+    private static TypeRecord Type(ICatalog catalog, int typeId, string what) =>
+        catalog.TypeById(typeId) ?? throw new EsfCatalogException($"unknown {what} type ID {typeId}");
+
+    private static string TypeName(ICatalog catalog, int typeId, string what) =>
+        Canonical.QuoteType(Type(catalog, typeId, what).Name);
+
+    private static string TypeRef(ICatalog catalog, int typeId, string what) =>
+        Canonical.TypeRef(catalog, Type(catalog, typeId, what));
 
     private static void Hull(StringBuilder text, EsfFit fit, ICatalog catalog)
     {
-        text.Append(fit.Hull is { } hull ? TypeName(catalog, hull, "hull") : "-");
+        text.Append(fit.Hull is { } hull ? TypeRef(catalog, hull, "hull") : "-");
         if (!string.IsNullOrEmpty(fit.Name))
         {
             text.Append(' ').Append(Name(fit.Name));
@@ -154,7 +157,7 @@ internal static class Source
         {
             text.Append(CultureInfo.InvariantCulture, $"{e.Count}x ");
         }
-        text.Append(e.Type is { } type ? TypeName(catalog, type, "item") : "-");
+        text.Append(e.Type is { } type ? TypeRef(catalog, type, "item") : "-");
         if (!string.IsNullOrEmpty(e.FitName))
         {
             text.Append(' ').Append(Name(e.FitName));
@@ -166,7 +169,7 @@ internal static class Source
             {
                 text.Append(CultureInfo.InvariantCulture, $"{e.ChargeCount}x ");
             }
-            text.Append(TypeName(catalog, charge, "charge"));
+            text.Append(TypeRef(catalog, charge, "charge"));
         }
         if (e.Mutaplasmid is { } mutaplasmid)
         {

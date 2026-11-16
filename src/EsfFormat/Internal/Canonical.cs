@@ -3,7 +3,7 @@ using System.Text;
 
 namespace EveShipFit.EsfFormat.Internal;
 
-internal sealed class CanonLine(TypeRecord? type)
+internal sealed class CanonLine(TypeRecord? type, string typeText = "-")
 {
     private string? body;
 
@@ -14,6 +14,8 @@ internal sealed class CanonLine(TypeRecord? type)
     public string? FitName { get; init; }
 
     public TypeRecord? Charge { get; init; }
+
+    public string? ChargeText { get; init; }
 
     public uint? ChargeCount { get; init; }
 
@@ -34,19 +36,19 @@ internal sealed class CanonLine(TypeRecord? type)
 
     private StringBuilder WriteBody(StringBuilder builder)
     {
-        builder.Append(Type is null ? "-" : Canonical.QuoteType(Type.Name));
+        builder.Append(typeText);
         if (FitName is not null)
         {
             builder.Append(' ').Append(Canonical.Quote(FitName));
         }
-        if (Charge is not null)
+        if (ChargeText is not null)
         {
             builder.Append(" :");
             if (ChargeCount is not null)
             {
                 builder.Append(CultureInfo.InvariantCulture, $"{ChargeCount}x ");
             }
-            builder.Append(Canonical.QuoteType(Charge.Name));
+            builder.Append(ChargeText);
         }
         if (MutaplasmidName is not null)
         {
@@ -70,7 +72,7 @@ internal sealed class CanonLine(TypeRecord? type)
     }
 }
 
-internal sealed class CanonFit(TypeRecord? hull, string? name, TypeRecord? mode, string? modeText, List<List<CanonLine>> groups)
+internal sealed class CanonFit(TypeRecord? hull, string hullText, string? name, TypeRecord? mode, string? modeText, List<List<CanonLine>> groups)
 {
     public TypeRecord? Hull { get; } = hull;
 
@@ -82,7 +84,7 @@ internal sealed class CanonFit(TypeRecord? hull, string? name, TypeRecord? mode,
 
     public void Write(StringBuilder builder)
     {
-        builder.Append("%esf/1\n").Append(Hull is null ? "-" : Canonical.QuoteType(Hull.Name));
+        builder.Append("%esf/1\n").Append(hullText);
         if (Name is not null)
         {
             builder.Append(' ').Append(Canonical.Quote(Name));
@@ -113,10 +115,17 @@ internal static class Canonical
         var words = name.Split(' ');
         return words[0] is "" or ['-' or '%', ..]
             || Text.IsCount(words[0])
+            || Text.IsTypeId(name)
             || Array.Exists(words, w => w.Length == 0 || Text.IsSigil(w[0]));
     }
 
     public static string QuoteType(string name) => NeedsQuotes(name) ? Quote(name) : name;
+
+    /// <summary>A type as text: its name, or its ID where the name resolves to another type (§6.13).</summary>
+    public static string TypeRef(ICatalog catalog, TypeRecord type) =>
+        catalog.TypeByName(Names.Fold(type.Name))?.Id == type.Id
+            ? QuoteType(type.Name)
+            : string.Create(CultureInfo.InvariantCulture, $"#{type.Id}");
 
     public static CanonFit Fit(Fit fit, ICatalog catalog)
     {
@@ -159,7 +168,8 @@ internal static class Canonical
             modeText = Names.ShortestUnique(own, others);
         }
 
-        return new CanonFit(fit.Hull, fit.Name, fit.Mode, modeText, chunks);
+        var hullText = fit.Hull is null ? "-" : TypeRef(catalog, fit.Hull);
+        return new CanonFit(fit.Hull, hullText, fit.Name, fit.Mode, modeText, chunks);
     }
 
     public static string Render(List<CanonFit> fits)
@@ -232,10 +242,11 @@ internal static class Canonical
         }
 
         var place = item.Place;
-        return new CanonLine(item.Type)
+        return new CanonLine(item.Type, TypeRef(catalog, item.Type))
         {
             FitName = item.Reference?.Name,
             Charge = item.Charge,
+            ChargeText = item.Charge is null ? null : TypeRef(catalog, item.Charge),
             ChargeCount = chargeCount,
             Mutaplasmid = item.Mutaplasmid,
             MutaplasmidName = mutaplasmidName,

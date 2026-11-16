@@ -57,6 +57,8 @@ public class InternalTest
     [InlineData("Damage  Control", true)]
     [InlineData("Damage @Control", true)]
     [InlineData("Damage Control ", true)]
+    [InlineData("#85282", true)]
+    [InlineData("#System", false)]
     public void NeedsQuotes(string name, bool quoted) => Assert.Equal(quoted, Canonical.NeedsQuotes(name));
 
     [Theory]

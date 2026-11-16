@@ -19,13 +19,16 @@ internal sealed class EmptyLine(int number, Location rack) : Line(number)
     public Location Rack { get; } = rack;
 }
 
-internal sealed class ItemLine(int number, string name) : Line(number)
+/// <summary>A type as written: a name, or a type ID.</summary>
+internal readonly record struct TypeRef(string Name, uint? Id = null);
+
+internal sealed class ItemLine(int number, TypeRef type) : Line(number)
 {
-    public string Name { get; } = name;
+    public TypeRef Type { get; } = type;
 
     public string? FitName { get; set; }
 
-    public string? Charge { get; set; }
+    public TypeRef? Charge { get; set; }
 
     public uint? ChargeCount { get; set; }
 
@@ -44,7 +47,7 @@ internal sealed class FitBlock(int number, int hullLine)
 
     public int HullLine { get; } = hullLine;
 
-    public string? Hull { get; set; }
+    public TypeRef? Hull { get; set; }
 
     public string? FitName { get; set; }
 
@@ -60,6 +63,9 @@ internal static partial class Text
 
     public static bool IsCount(ReadOnlySpan<char> token) =>
         token.Length > 1 && token[^1] == 'x' && !token[..^1].ContainsAnyExceptInRange('0', '9');
+
+    public static bool IsTypeId(ReadOnlySpan<char> name) =>
+        name.Length > 1 && name[0] == '#' && !name[1..].ContainsAnyExceptInRange('0', '9');
 
     /// <summary>Split a text document into fits; other blocks are skipped.</summary>
     public static List<FitBlock> Parse(string text)
@@ -179,7 +185,7 @@ internal static partial class Text
             {
                 throw Error("the hull line cannot have a count");
             }
-            block.Hull = TypeName();
+            block.Hull = TypeRef();
             var more = NextElement();
             if (more && Peek() == '"')
             {
@@ -224,7 +230,7 @@ internal static partial class Text
                 return new EmptyLine(number, rack) { Count = count, Index = index };
             }
 
-            var line = new ItemLine(number, TypeName()) { Count = count };
+            var line = new ItemLine(number, TypeRef()) { Count = count };
             var more = NextElement();
 
             if (more && Peek() == '"')
@@ -255,7 +261,7 @@ internal static partial class Text
                 {
                     i++;
                     line.ChargeCount = Count();
-                    line.Charge = TypeName();
+                    line.Charge = TypeRef();
                     stage = 1;
                 }
                 else if (c == '+' && stage < 2)
@@ -445,6 +451,21 @@ internal static partial class Text
                         : name;
                 }
             }
+        }
+
+        private TypeRef TypeRef()
+        {
+            var quoted = Peek() == '"';
+            var name = TypeName();
+            if (quoted || !IsTypeId(name))
+            {
+                return new TypeRef(name);
+            }
+            if (!uint.TryParse(name.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out var id))
+            {
+                throw Error("a type ID is too large");
+            }
+            return new TypeRef(name, id);
         }
 
         private (Location Location, uint? Index) Location()

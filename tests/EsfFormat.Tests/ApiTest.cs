@@ -225,11 +225,6 @@ public class ApiTest
             [Fit(new Entry(DamageControl) { Overrides = new Dictionary<int, double> { [50] = double.PositiveInfinity } })],
             "not finite"
         },
-        {
-            "id-shadowed",
-            [Fit(new Entry(AvatarUnpublished) { Location = Location.Cargo })],
-            "not what its name resolves to"
-        },
         { "contains-itself", [Named("Buffer", new Entry(Rifter) { FitName = "Buffer" })], "cannot contain itself" },
         { "name-newline", [Named("Two\nlines")], "CR or LF" },
         { "name-lone-surrogate", [Named("\uD800")], "not valid UTF-8" },
@@ -243,13 +238,6 @@ public class ApiTest
         Assert.NotEmpty(name);
         Assert.Contains(message, Assert.ThrowsAny<EsfException>(() => Esf.Save(fits, Catalog)).Message, StringComparison.Ordinal);
         Assert.Contains(message, Assert.ThrowsAny<EsfException>(() => Esf.SaveBinary(fits, Catalog)).Message, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void HullIdShadowed()
-    {
-        var error = Assert.Throws<EsfRuleException>(() => Esf.Save([new EsfFit { Hull = AvatarUnpublished }], Catalog));
-        Assert.Equal($"fit 1: hull ID {AvatarUnpublished} is not what its name resolves to ({Avatar})", error.Message);
     }
 
     [Fact]
@@ -328,6 +316,22 @@ public class ApiTest
             Esf.Save([Fit(new Entry(Avatar) { Location = Location.Cargo })], Catalog),
             StringComparison.Ordinal);
 
+    [Fact]
+    public void SharedNameByTypeId()
+    {
+        var rifter = Fit(new Entry(AvatarUnpublished));
+        var text = Esf.Save([rifter], Catalog);
+        Assert.Equal("%esf/1\nRifter\n\n#50097\n", text);
+        Assert.Equal([rifter], Esf.Load(text, Catalog));
+        Assert.Equal([rifter], Esf.Load(Esf.SaveBinary([rifter], Catalog), Catalog));
+    }
+
+    [Fact]
+    public void LoadTypeId() =>
+        Assert.Equal(
+            [Fit(new Entry(Autocannon) { Charge = Emp })],
+            Esf.Load("%esf/1\n#587\n#2889 :#21898\n", Catalog));
+
     public static TheoryData<byte[], string> InvalidDocuments() => new()
     {
         { [], "the document is empty" },
@@ -338,6 +342,9 @@ public class ApiTest
                 "%esf/1\nRifter\n4294967295x Damage Control II\n4294967295x Damage Control II\n"),
             "too large"
         },
+        { [.. "%esf/1\nRifter\n#4294967296\n"u8], "type ID is too large" },
+        { [.. "%esf/1\nRifter\n#999999999\n"u8], "unknown type ID" },
+        { [.. "%esf/1\nRifter\n#4294967295\n"u8], "unknown type ID" },
     };
 
     [Theory]
