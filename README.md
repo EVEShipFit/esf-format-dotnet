@@ -109,6 +109,19 @@ new TypeRecord(
 [examples/SdeJsonlCatalog.cs](https://github.com/EVEShipFit/esf-format-dotnet/blob/main/examples/SdeJsonlCatalog.cs)
 is a complete example on the official SDE in JSONL: copy it into your project.
 
+## ESI
+
+ESI gives each item in a ship a `location_flag`. `Esi` turns it into a
+location and a slot:
+
+```csharp
+new Entry(typeId) { Location = Esi.Location(flag) ?? Location.Cargo, Slot = Esi.Slot(flag) }
+```
+
+`HiSlot2` gives `High` and slot 3, and `ShipHangar` gives `Maintenance`.
+A flag that is not inside a ship, like `Hangar`, gives `null`; the example
+puts those items in the cargo hold.
+
 ## Tests
 
 The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format):
