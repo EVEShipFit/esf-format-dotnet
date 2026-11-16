@@ -9,8 +9,8 @@ namespace EveShipFit.EsfFormat;
 /// Set <see cref="Bay"/> to keep either one in its bay.
 /// </para>
 /// <para>
-/// The racks, <see cref="High"/> to <see cref="Svc"/>, are for empty slots, and for an item put in a given
-/// <see cref="Entry.Slot"/>. Otherwise, an item never names its rack.
+/// The racks, <see cref="High"/> to <see cref="Svc"/> and <see cref="Tube"/>, are for empty slots, and for an item
+/// put in a given <see cref="Entry.Slot"/>. Otherwise, an item never names its rack.
 /// The holds, <see cref="Ammo"/> to <see cref="Subsystem"/>, only make sense on a hull that has that hold, but the
 /// library does not check that.
 /// </para>
@@ -97,4 +97,7 @@ public enum Location
 
     /// <summary>The Subsystem Hold, for spare subsystems. Not the same as <see cref="Sub"/>, which is the rack.</summary>
     Subsystem = 27,
+
+    /// <summary>The fighter launch tubes, a rack for fighters only.</summary>
+    Tube = 28,
 }

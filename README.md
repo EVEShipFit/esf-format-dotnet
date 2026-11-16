@@ -65,7 +65,7 @@ Each `Entry` is one line of the fit. `null` means the default:
 | `Overrides` | Attribute values by attribute ID. | |
 | `State` | `State.Off`, `On` or `Heat`. | Active if the type can be, else on. |
 | `Location` | `Cargo`, `Bay` or another hold; a rack for an empty slot, or with `Slot`. | Where the type goes by default. |
-| `Slot` | The slot in the `Location` rack, counting from 1. Not with `Count`; the item must go in that rack, and each slot is pinned once. `Load()` never sets it: it returns the rack in slot order, with empty slots between. | The next free slot. |
+| `Slot` | The slot in the `Location` rack, counting from 1. Not with `Count`, except for a fighter in a `Tube`; the item must go in that rack, and each slot is pinned once. `Load()` never sets it: it returns the rack in slot order, with empty slots between. | The next free slot. |
 
 `EsfFit` and `Entry` are records, and compare by value.
 

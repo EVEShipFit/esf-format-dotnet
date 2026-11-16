@@ -138,7 +138,12 @@ internal static class Canonical
         var chunks = new List<List<CanonLine>>();
         foreach (var group in Places.Groups)
         {
-            var chunk = group.IsRack() ? Rack(fit, group, catalog) : Group(fit, group, catalog, groups);
+            var chunk = group switch
+            {
+                Place.Tube => [.. Tubes(fit, catalog), .. Group(fit, group, catalog, groups)],
+                _ when group.IsRack() => Rack(fit, group, catalog),
+                _ => Group(fit, group, catalog, groups),
+            };
             if (chunk.Count > 0)
             {
                 chunks.Add(chunk);
@@ -265,7 +270,7 @@ internal static class Canonical
         }
         return merged.ConvertAll(o =>
         {
-            if (o.Line.Count == 1)
+            if (o.Repeatable && o.Line.Count == 1)
             {
                 o.Line.Count = null;
             }
@@ -282,7 +287,6 @@ internal static class Canonical
         return group switch
         {
             Place.Drones => [.. Sorted(InPlace(items, Place.Drones), fit, catalog), .. Bay(items, fit, catalog)],
-            Place.Fighters => [.. Fighters(items, fit, catalog), .. Bay(items, fit, catalog)],
             _ => Sorted(items, fit, catalog),
         };
     }
@@ -325,14 +329,25 @@ internal static class Canonical
     private static List<CanonLine> Bay(List<Item> items, Fit fit, ICatalog catalog) =>
         Sorted(InPlace(items, Place.Bay), fit, catalog);
 
-    private static IEnumerable<CanonLine> Fighters(List<Item> items, Fit fit, ICatalog catalog) =>
-        InPlace(items, Place.Fighters).Select(item =>
+    /// <summary>The launch tubes, in tube order (§8).</summary>
+    private static List<CanonLine> Tubes(Fit fit, ICatalog catalog)
+    {
+        if (!fit.Racks.TryGetValue(Place.Tube, out var runs))
         {
-            var line = Line(item, fit, catalog);
-            if (item.Line.Count is { } count && count != item.Type.SquadronSize)
+            return [];
+        }
+        return Collapse(runs.Take(runs.FindLastIndex(run => run.Item is not null) + 1).Select(run =>
+        {
+            if (run.Item is null)
+            {
+                return (true, new CanonLine(null) { Location = Location.Tube, Count = run.Length });
+            }
+            var line = Line(run.Item, fit, catalog);
+            if (run.Item.Line.Count is { } count && count != run.Item.Type.SquadronSize)
             {
                 line.Count = count;
             }
-            return line;
-        });
+            return (false, line);
+        }));
+    }
 }

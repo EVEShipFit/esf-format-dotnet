@@ -74,11 +74,15 @@ public sealed record Entry(int? Type)
     /// </summary>
     public Location? Location { get; init; }
 
-    /// <summary>The slot in the <see cref="Location"/> rack, counting from 1, like 3 for the third high slot.</summary>
+    /// <summary>
+    /// The slot in the <see cref="Location"/> rack, counting from 1, like 3 for the third high slot or the third
+    /// launch tube.
+    /// </summary>
     /// <remarks>
     /// Set <see cref="Location"/> to the rack too, and the item must go in that rack.
     /// <see langword="null"/> means the next free slot. A slot cannot be combined with <see cref="Count"/>,
-    /// and each slot in a rack can be pinned once.
+    /// except for a fighter in a <see cref="EsfFormat.Location.Tube"/>, where the count is the size of the squadron.
+    /// Each slot in a rack can be pinned once.
     /// Loading a fit never sets this: it gives the rack in slot order, with empty slots in between.
     /// </remarks>
     public uint? Slot { get; init; }

@@ -287,7 +287,7 @@ internal static partial class Text
                     {
                         throw Error("an item names a rack only to pin a slot, which needs an index");
                     }
-                    if (index is not null && count is not null)
+                    if (index is not null && count is not null && location != EsfFormat.Location.Tube)
                     {
                         throw Error("a count and a pinned slot are mutually exclusive");
                     }

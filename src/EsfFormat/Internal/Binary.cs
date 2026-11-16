@@ -194,7 +194,7 @@ internal static class Binary
                     state = Known<State>(field.Varint, (ulong)State.Heat, "State");
                     break;
                 case (10, WireType.Varint):
-                    location = Known<Location>(field.Varint, (ulong)Location.Subsystem, "Location");
+                    location = Known<Location>(field.Varint, (ulong)Location.Tube, "Location");
                     break;
                 default:
                     throw NotInSchema("Entry");

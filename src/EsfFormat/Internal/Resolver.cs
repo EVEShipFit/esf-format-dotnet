@@ -321,7 +321,7 @@ internal static class Resolver
             {
                 continue;
             }
-            long remaining = part.Line.Count ?? 1;
+            long remaining = part is Item { Place: Place.Tube } ? 1 : part.Line.Count ?? 1;
             while (remaining > 0)
             {
                 while (pinned.ContainsKey(pos))
