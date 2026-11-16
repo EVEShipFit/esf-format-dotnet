@@ -13,6 +13,9 @@ internal static class Fixtures
     public const int Avatar = 11567;
     public const int AvatarUnpublished = 50097;
     public const int SmallSecureContainer = 3467;
+    public const int Nyx = 23913;
+    public const int TemplarII = 40556;
+    public const int FirbolgII = 40558;
 
     /// <summary>The esf-format checkout with the test cases.</summary>
     public static readonly string Root = FindRoot();

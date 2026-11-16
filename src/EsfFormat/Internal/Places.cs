@@ -30,8 +30,8 @@ internal enum Place
     Planetary = Location.Planetary,
     Quafe = Location.Quafe,
     Subsystem = Location.Subsystem,
+    Tube = Location.Tube,
     Drones,
-    Fighters,
     Implants,
     Boosters,
 }
@@ -45,7 +45,7 @@ internal static class Places
     [
         .. Racks,
         Place.Drones,
-        Place.Fighters,
+        Place.Tube,
         Place.Cargo,
         .. Enumerable.Range((int)Place.Ammo, Place.Subsystem - Place.Ammo + 1).Select(p => (Place)p),
         Place.Implants,
@@ -62,7 +62,7 @@ internal static class Places
 
     private static readonly Dictionary<string, State> States = StateNames.ToDictionary(p => p.Value, p => p.Key);
 
-    public static bool IsRack(this Place place) => place <= Place.Svc;
+    public static bool IsRack(this Place place) => place is <= Place.Svc or Place.Tube;
 
     public static bool IsStored(this Place place) => place is >= Place.Cargo and <= Place.Subsystem;
 
@@ -82,7 +82,7 @@ internal static class Places
         Kind.Rig => Place.Rig,
         Kind.Svc => Place.Svc,
         Kind.Drone => Place.Drones,
-        Kind.Fighter => Place.Fighters,
+        Kind.Fighter => Place.Tube,
         Kind.Implant => Place.Implants,
         Kind.Booster => Place.Boosters,
         _ => null,

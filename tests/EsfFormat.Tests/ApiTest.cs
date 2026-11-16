@@ -85,6 +85,45 @@ public class ApiTest
     }
 
     [Fact]
+    public void SaveTubes()
+    {
+        var carrier = new EsfFit
+        {
+            Hull = Nyx,
+            Entries =
+            [
+                new Entry(TemplarII),
+                new Entry(FirbolgII) { Count = 3, Location = Location.Tube, Slot = 4 },
+                new Entry(null) { Location = Location.Tube, Slot = 2 },
+                new Entry(null) { Location = Location.Tube },
+                new Entry(TemplarII) { Location = Location.Bay },
+            ],
+        };
+        var text = Esf.Save([carrier], Catalog);
+        Assert.Equal(
+            """
+            %esf/1
+            Nyx
+
+            Templar II
+            2x - @tube
+            3x Firbolg II
+            Templar II @bay
+
+            """.ReplaceLineEndings("\n"),
+            text);
+        Assert.Equal(
+            [
+                new Entry(TemplarII),
+                new Entry(null) { Count = 2, Location = Location.Tube },
+                new Entry(FirbolgII) { Count = 3 },
+                new Entry(TemplarII) { Location = Location.Bay },
+            ],
+            Esf.Load(text, Catalog).Single().Entries);
+        Assert.Equal(Esf.Load(text, Catalog), Esf.Load(Esf.SaveBinary([carrier], Catalog), Catalog));
+    }
+
+    [Fact]
     public void LoadText() =>
         Assert.Equal([new EsfFit { Hull = Rifter }], Esf.Load("%esf/1\nRifter\n", Catalog));
 
@@ -149,6 +188,17 @@ public class ApiTest
             "slot-wrong-rack",
             [Fit(new Entry(Autocannon) { Location = Location.Low, Slot = 1 })],
             "does not go in the low rack"
+        },
+        { "tube-on-fighter", [Fit(new Entry(TemplarII) { Location = Location.Tube })], "only to pin a slot" },
+        {
+            "empty-tube-with-count",
+            [Fit(new Entry(null) { Count = 2, Location = Location.Tube, Slot = 1 })],
+            "mutually exclusive"
+        },
+        {
+            "tube-not-fighter",
+            [Fit(new Entry(Hobgoblin) { Location = Location.Tube, Slot = 1 })],
+            "does not go in the tube rack"
         },
         { "slot-on-hold", [Fit(new Entry(Emp) { Location = Location.Cargo, Slot = 1 })], "needs the rack" },
         {
