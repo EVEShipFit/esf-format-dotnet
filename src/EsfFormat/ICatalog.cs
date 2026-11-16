@@ -40,6 +40,7 @@ public interface ICatalog
 
     /// <summary>Finds an attribute by its name, like "speedfactor".</summary>
     /// <remarks>
+    /// <para>Used to read attribute overrides, like the rolls on an abyssal module.</para>
     /// <para>
     /// This works the same way as <see cref="TypeByName"/>: the name is already case-folded with
     /// <see cref="Esf.Fold"/>, unpublished attributes count too, and where names are shared, the
@@ -49,7 +50,11 @@ public interface ICatalog
     /// </remarks>
     AttributeRecord? AttributeByName(string foldedName);
 
-    /// <summary>Finds an attribute by its ID. Return <see langword="null"/> if there is no attribute with this ID.</summary>
+    /// <summary>Finds an attribute by its ID.</summary>
+    /// <remarks>
+    /// <para>Used to write attribute overrides, like the rolls on an abyssal module.</para>
+    /// <para>Return <see langword="null"/> if there is no attribute with this ID.</para>
+    /// </remarks>
     AttributeRecord? AttributeById(int attributeId);
 
     /// <summary>The tactical modes a hull can be in, like the Hecate's Defense, Propulsion and Sharpshooter Mode.</summary>
