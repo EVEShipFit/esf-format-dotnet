@@ -5,6 +5,8 @@ namespace EveShipFit.EsfFormat;
 /// <para>
 /// An item goes where its <see cref="Kind"/> says, so most entries leave this <see langword="null"/>.
 /// Set it to store an item somewhere else, like a spare Damage Control II in <see cref="Cargo"/>.
+/// So a drone with no location is out in space, and a fighter is in a launch tube.
+/// Set <see cref="Bay"/> to keep either one in its bay.
 /// </para>
 /// <para>
 /// The racks, <see cref="High"/> to <see cref="Svc"/>, are for empty slots, and for an item put in a given
