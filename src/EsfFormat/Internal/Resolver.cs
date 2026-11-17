@@ -85,7 +85,7 @@ internal static class Resolver
                 var part = ResolveLine(line, fit, named, catalog);
                 if (part is Item { Place: var place } item && place.IsPlugged() && !plugged.Add(item.Type.Id))
                 {
-                    throw new EsfException($"'{item.Type.Name}' is plugged in twice", line.Number);
+                    throw new EsfRuleException($"'{item.Type.Name}' is plugged in twice", line.Number);
                 }
                 fit.Parts.Add(part);
             }
@@ -108,14 +108,14 @@ internal static class Resolver
         mode.Name.AsSpan(Math.Min(hull.Name.Length, mode.Name.Length)).TrimStart(' ').ToString();
 
     private static TypeRecord LookUp(ICatalog catalog, string name, int line) =>
-        catalog.TypeByName(Names.Fold(name)) ?? throw new EsfException($"unknown type '{name}'", line);
+        catalog.TypeByName(Names.Fold(name)) ?? throw new EsfCatalogException($"unknown type '{name}'", line);
 
     private static T Pick<T>(List<T> candidates, string given, string what, int line, Func<T, string> name) =>
         candidates.Count switch
         {
-            0 => throw new EsfException($"no {what} matches '{given}'", line),
+            0 => throw new EsfCatalogException($"no {what} matches '{given}'", line),
             1 => candidates[0],
-            _ => throw new EsfException(
+            _ => throw new EsfCatalogException(
                 $"'{given}' matches more than one {what}: {string.Join(", ", candidates.Select(c => $"'{name(c)}'"))}",
                 line),
         };
@@ -130,7 +130,7 @@ internal static class Resolver
         var hull = LookUp(catalog, block.Hull, block.HullLine);
         if (!hull.Kind.CanBeHull())
         {
-            throw new EsfException($"'{hull.Name}' is not a ship, structure or container", block.HullLine);
+            throw new EsfRuleException($"'{hull.Name}' is not a ship, structure or container", block.HullLine);
         }
 
         TypeRecord? mode = null;
@@ -139,7 +139,7 @@ internal static class Resolver
             var modes = catalog.Modes(hull.Id);
             if (modes.Count == 0)
             {
-                throw new EsfException($"'{hull.Name}' has no tactical modes", block.HullLine);
+                throw new EsfRuleException($"'{hull.Name}' has no tactical modes", block.HullLine);
             }
             var matches = modes
                 .Where(m => Names.IsWordPrefix(block.Mode, m.Name) || Names.IsWordPrefix(block.Mode, ModeName(hull, m)))
@@ -158,7 +158,7 @@ internal static class Resolver
         {
             if (fit.CargoOnly)
             {
-                throw new EsfException("a fit without a ship has no slots to keep empty", n);
+                throw new EsfRuleException("a fit without a ship has no slots to keep empty", n);
             }
             return new EmptySlot(empty);
         }
@@ -168,7 +168,7 @@ internal static class Resolver
         var kind = type.Kind;
         if (kind == Kind.Mode)
         {
-            throw new EsfException("a tactical mode is only written on the hull line", n);
+            throw new EsfRuleException("a tactical mode is only written on the hull line", n);
         }
 
         var item = new Item(line, type, Places.Default(kind, fit.CargoOnly));
@@ -177,13 +177,13 @@ internal static class Resolver
         {
             if (!kind.CanBeHull())
             {
-                throw new EsfException($"'{type.Name}' cannot take a fit name", n);
+                throw new EsfRuleException($"'{type.Name}' cannot take a fit name", n);
             }
             var matches = named.GetValueOrDefault((type.Id, Names.Fold(line.FitName)));
             if (matches is not { Count: 1 })
             {
                 var what = matches is null ? "no fit" : "more than one fit";
-                throw new EsfException($"{what} matches {type.Name} '{line.FitName}'", n);
+                throw new EsfRuleException($"{what} matches {type.Name} '{line.FitName}'", n);
             }
             item.Reference = matches[0];
         }
@@ -193,33 +193,33 @@ internal static class Resolver
             var place = location.ToPlace();
             if (fit.CargoOnly && location != Location.Cargo)
             {
-                throw new EsfException("a fit without a ship stores everything in cargo", n);
+                throw new EsfRuleException("a fit without a ship stores everything in cargo", n);
             }
             if (line.Index is not null && Places.Default(kind) != place)
             {
-                throw new EsfException($"'{type.Name}' does not go in the {location.Name()} rack", n);
+                throw new EsfRuleException($"'{type.Name}' does not go in the {location.Name()} rack", n);
             }
             if (location == Location.Bay && kind is not (Kind.Drone or Kind.Fighter))
             {
-                throw new EsfException("@bay is only for drones and fighters", n);
+                throw new EsfRuleException("@bay is only for drones and fighters", n);
             }
             item.Move(place);
         }
 
         if (item.Place.IsPlugged() && line.Count is not null)
         {
-            throw new EsfException("a plugged-in implant or booster takes no count", n);
+            throw new EsfRuleException("a plugged-in implant or booster takes no count", n);
         }
 
         if (line.State is { } state)
         {
             if (item.Stored)
             {
-                throw new EsfException("a stored item has no state", n);
+                throw new EsfRuleException("a stored item has no state", n);
             }
             if (item.Place.IsPlugged() && state != State.Off)
             {
-                throw new EsfException("an implant or booster takes !off only", n);
+                throw new EsfRuleException("an implant or booster takes !off only", n);
             }
         }
 
@@ -228,7 +228,7 @@ internal static class Resolver
             item.Charge = LookUp(catalog, line.Charge, n);
             if (item.Charge.Kind != Kind.Charge)
             {
-                throw new EsfException($"'{item.Charge.Name}' is not a charge", n);
+                throw new EsfRuleException($"'{item.Charge.Name}' is not a charge", n);
             }
         }
 
@@ -244,15 +244,15 @@ internal static class Resolver
         foreach (var (name, value) in line.Overrides)
         {
             var attribute = catalog.AttributeByName(Names.Fold(name))
-                ?? throw new EsfException($"unknown attribute '{name}'", n);
+                ?? throw new EsfCatalogException($"unknown attribute '{name}'", n);
             if (item.Overrides.Exists(o => o.Attribute.Id == attribute.Id))
             {
-                throw new EsfException($"attribute '{attribute.Name}' is overridden twice", n);
+                throw new EsfRuleException($"attribute '{attribute.Name}' is overridden twice", n);
             }
             var number = double.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
             if (!double.IsFinite(number))
             {
-                throw new EsfException($"value '{value}' is out of range", n);
+                throw new EsfRuleException($"value '{value}' is out of range", n);
             }
             item.Overrides.Add((attribute, number));
         }
@@ -289,7 +289,7 @@ internal static class Resolver
                 var reference = item.Reference!;
                 if (path.Contains(reference))
                 {
-                    throw new EsfException("a fit cannot contain itself", item.Line.Number);
+                    throw new EsfRuleException("a fit cannot contain itself", item.Line.Number);
                 }
                 if (!done.Contains(reference))
                 {
@@ -308,7 +308,7 @@ internal static class Resolver
         {
             if (part.Line.Index is { } index && !pinned.TryAdd(index, part))
             {
-                throw new EsfException($"slot {index} is pinned twice", part.Line.Number);
+                throw new EsfRuleException($"slot {index} is pinned twice", part.Line.Number);
             }
         }
 

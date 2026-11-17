@@ -241,14 +241,14 @@ public class ApiTest
     public void SaveInvalid(string name, EsfFit[] fits, string message)
     {
         Assert.NotEmpty(name);
-        Assert.Contains(message, Assert.Throws<EsfException>(() => Esf.Save(fits, Catalog)).Message, StringComparison.Ordinal);
-        Assert.Contains(message, Assert.Throws<EsfException>(() => Esf.SaveBinary(fits, Catalog)).Message, StringComparison.Ordinal);
+        Assert.Contains(message, Assert.ThrowsAny<EsfException>(() => Esf.Save(fits, Catalog)).Message, StringComparison.Ordinal);
+        Assert.Contains(message, Assert.ThrowsAny<EsfException>(() => Esf.SaveBinary(fits, Catalog)).Message, StringComparison.Ordinal);
     }
 
     [Fact]
     public void HullIdShadowed()
     {
-        var error = Assert.Throws<EsfException>(() => Esf.Save([new EsfFit { Hull = AvatarUnpublished }], Catalog));
+        var error = Assert.Throws<EsfRuleException>(() => Esf.Save([new EsfFit { Hull = AvatarUnpublished }], Catalog));
         Assert.Equal($"fit 1: hull ID {AvatarUnpublished} is not what its name resolves to ({Avatar})", error.Message);
     }
 
@@ -257,14 +257,14 @@ public class ApiTest
     {
         var catalog = new RenamedAttribute(Catalog, 974, "cpu");
         var fit = Fit(new Entry(DamageControl) { Overrides = new Dictionary<int, double> { [974] = 1 } });
-        var error = Assert.Throws<EsfException>(() => Esf.Save([fit], catalog));
+        var error = Assert.Throws<EsfRuleException>(() => Esf.Save([fit], catalog));
         Assert.Equal("fit 1, entry 1: attribute IDs [974] resolve to [50]", error.Message);
     }
 
     [Fact]
     public void ErrorLocation()
     {
-        var error = Assert.Throws<EsfException>(
+        var error = Assert.Throws<EsfCatalogException>(
             () => Esf.Save([Fit(), Fit(new Entry(Autocannon), new Entry(999_999_999))], Catalog));
         Assert.Equal((2, 2, null), (error.FitNumber, error.EntryNumber, error.LineNumber));
         Assert.StartsWith("fit 2, entry 2: ", error.Message, StringComparison.Ordinal);
@@ -273,7 +273,7 @@ public class ApiTest
     [Fact]
     public void ErrorLocationOfAFit()
     {
-        var error = Assert.Throws<EsfException>(
+        var error = Assert.Throws<EsfCatalogException>(
             () => Esf.Save([Fit(), new EsfFit { Hull = Rifter, Mode = 999_999_999 }], Catalog));
         Assert.Equal((2, null), (error.FitNumber, error.EntryNumber));
         Assert.StartsWith("fit 2: ", error.Message, StringComparison.Ordinal);
@@ -282,23 +282,34 @@ public class ApiTest
     [Fact]
     public void ErrorLocationOfAResolvedFit()
     {
-        var error = Assert.Throws<EsfException>(() => Esf.Save([Fit(), new EsfFit { Hull = Emp }], Catalog));
+        var error = Assert.Throws<EsfRuleException>(() => Esf.Save([Fit(), new EsfFit { Hull = Emp }], Catalog));
         Assert.Equal("fit 2: 'Republic Fleet EMP S' is not a ship, structure or container", error.Message);
     }
 
     [Fact]
     public void ErrorLocationOfALine()
     {
-        var error = Assert.Throws<EsfException>(() => Esf.Load("%esf/1\nRifter\nNot A Type\n", Catalog));
+        var error = Assert.Throws<EsfCatalogException>(() => Esf.Load("%esf/1\nRifter\nNot A Type\n", Catalog));
         Assert.Equal(3, error.LineNumber);
         Assert.Equal("unknown type 'Not A Type'", error.Reason);
         Assert.Equal("line 3: unknown type 'Not A Type'", error.Message);
     }
 
     [Fact]
+    public void ErrorKinds()
+    {
+        Assert.Throws<EsfFormatException>(() => Esf.Load("%esf/1\n2x Rifter\n", Catalog));
+        Assert.Throws<EsfFormatException>(() => Esf.Load([0x0A], Catalog));
+        Assert.Throws<EsfCatalogException>(() => Esf.Load("%esf/1\nRifter\nDamage Control II {nope 1}\n", Catalog));
+        Assert.Throws<EsfRuleException>(() => Esf.Load("%esf/1\nRifter\nDamage Control II @bay\n", Catalog));
+        Assert.Throws<EsfRuleException>(() => Esf.Save([Fit(new Entry(Autocannon) { Count = 0 })], Catalog));
+        Assert.Throws<EsfFormatException>(() => Esf.Save([Named("a\nb")], Catalog));
+    }
+
+    [Fact]
     public void ErrorWithoutLocation()
     {
-        var error = Assert.Throws<EsfException>(() => Esf.Load(""u8, Catalog));
+        var error = Assert.Throws<EsfFormatException>(() => Esf.Load(""u8, Catalog));
         Assert.Equal("the document is empty", error.Message);
     }
 
@@ -332,7 +343,7 @@ public class ApiTest
     [Theory]
     [MemberData(nameof(InvalidDocuments))]
     public void LoadInvalid(byte[] data, string message) =>
-        Assert.Contains(message, Assert.Throws<EsfException>(() => Esf.Load(data, Catalog)).Message, StringComparison.Ordinal);
+        Assert.Contains(message, Assert.ThrowsAny<EsfException>(() => Esf.Load(data, Catalog)).Message, StringComparison.Ordinal);
 
     [Theory]
     [InlineData("99999999999x Damage Control II")]
@@ -341,7 +352,7 @@ public class ApiTest
     public void CountTooLarge(string line) =>
         Assert.Equal(
             "line 3: a count is too large",
-            Assert.Throws<EsfException>(() => Esf.Load($"%esf/1\nRifter\n{line}\n", Catalog)).Message);
+            Assert.Throws<EsfFormatException>(() => Esf.Load($"%esf/1\nRifter\n{line}\n", Catalog)).Message);
 
     [Fact]
     public void BinaryEmptyNameIsNoName()
@@ -354,7 +365,7 @@ public class ApiTest
     public void LoadLoneSurrogate() =>
         Assert.Equal(
             "not valid UTF-8",
-            Assert.Throws<EsfException>(() => Esf.Load("%esf/1\nRifter\uD800\n", Catalog)).Message);
+            Assert.Throws<EsfFormatException>(() => Esf.Load("%esf/1\nRifter\uD800\n", Catalog)).Message);
 
     [Theory]
     [InlineData("Hecate /Defense", "no tactical modes")]
@@ -362,7 +373,7 @@ public class ApiTest
     public void CatalogWithoutOptionalLookups(string lines, string message) =>
         Assert.Contains(
             message,
-            Assert.Throws<EsfException>(() => Esf.Load($"%esf/1\n{lines}\n", new MinimalCatalog(Catalog))).Message,
+            Assert.ThrowsAny<EsfException>(() => Esf.Load($"%esf/1\n{lines}\n", new MinimalCatalog(Catalog))).Message,
             StringComparison.Ordinal);
 
     [Fact]
@@ -390,7 +401,7 @@ public class ApiTest
     [InlineData("AA==")]
     [InlineData("AAAAA")]
     public void InvalidBase64Url(string encoded) =>
-        Assert.Throws<EsfException>(() => Esf.FromBase64Url(encoded));
+        Assert.Throws<EsfFormatException>(() => Esf.FromBase64Url(encoded));
 
     [Fact]
     public void IsText()

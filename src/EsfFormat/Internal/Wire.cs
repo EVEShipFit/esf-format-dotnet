@@ -108,7 +108,7 @@ internal ref struct WireReader(ReadOnlySpan<byte> data)
     {
         if (payload.Length % 8 != 0)
         {
-            throw new EsfException("binary: not valid Protocol Buffers (packed doubles cut short)");
+            throw new EsfFormatException("binary: not valid Protocol Buffers (packed doubles cut short)");
         }
         var values = new double[payload.Length / 8];
         for (var i = 0; i < values.Length; i++)
@@ -133,14 +133,14 @@ internal ref struct WireReader(ReadOnlySpan<byte> data)
         };
     }
 
-    private static EsfException UnmatchedEndGroup() =>
+    private static EsfFormatException UnmatchedEndGroup() =>
         new("binary: not valid Protocol Buffers (unmatched end group)");
 
     private ReadOnlySpan<byte> Take(ulong n)
     {
         if (n > (ulong)(data.Length - pos))
         {
-            throw new EsfException("binary: not valid Protocol Buffers (cut short)");
+            throw new EsfFormatException("binary: not valid Protocol Buffers (cut short)");
         }
         var taken = data.Slice(pos, (int)n);
         pos += (int)n;
@@ -159,7 +159,7 @@ internal ref struct WireReader(ReadOnlySpan<byte> data)
                 return value;
             }
         }
-        throw new EsfException("binary: not valid Protocol Buffers (varint is too long)");
+        throw new EsfFormatException("binary: not valid Protocol Buffers (varint is too long)");
     }
 
     private (int Field, WireType Wire) Key()
@@ -168,7 +168,7 @@ internal ref struct WireReader(ReadOnlySpan<byte> data)
         var (field, wire) = (key >> 3, key & 7);
         if (field == 0 || key > uint.MaxValue || wire > (ulong)WireType.I32)
         {
-            throw new EsfException($"binary: not valid Protocol Buffers (bad key {key})");
+            throw new EsfFormatException($"binary: not valid Protocol Buffers (bad key {key})");
         }
         return ((int)field, (WireType)wire);
     }

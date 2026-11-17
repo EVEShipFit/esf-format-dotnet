@@ -77,7 +77,7 @@ internal static partial class Text
             var raw = lines[i].EndsWith('\r') ? lines[i][..^1] : lines[i];
             if (raw.Contains('\r', StringComparison.Ordinal))
             {
-                throw new EsfException("a CR must be followed by an LF", number);
+                throw new EsfFormatException("a CR must be followed by an LF", number);
             }
 
             var content = raw.AsSpan().TrimStart(' ');
@@ -86,11 +86,11 @@ internal static partial class Text
                 var match = HeaderPattern().Match(raw);
                 if (!match.Success)
                 {
-                    throw new EsfException("malformed header", number);
+                    throw new EsfFormatException("malformed header", number);
                 }
                 if (header is not null)
                 {
-                    throw new EsfException("a fit needs a hull line", header);
+                    throw new EsfFormatException("a fit needs a hull line", header);
                 }
                 inBlock = true;
                 current = null;
@@ -98,7 +98,7 @@ internal static partial class Text
                 {
                     if (match.Groups[2].ValueSpan is not "1")
                     {
-                        throw new EsfException($"unsupported version esf/{match.Groups[2].Value}", number);
+                        throw new EsfFormatException($"unsupported version esf/{match.Groups[2].Value}", number);
                     }
                     header = number;
                 }
@@ -107,7 +107,7 @@ internal static partial class Text
 
             if (!inBlock)
             {
-                throw new EsfException("a document starts with a header", number);
+                throw new EsfFormatException("a document starts with a header", number);
             }
             if (content.IsEmpty || content.StartsWith("//"))
             {
@@ -129,11 +129,11 @@ internal static partial class Text
 
         if (header is not null)
         {
-            throw new EsfException("a fit needs a hull line", header);
+            throw new EsfFormatException("a fit needs a hull line", header);
         }
         if (fits.Count == 0)
         {
-            throw new EsfException("a document holds at least one fit");
+            throw new EsfFormatException("a document holds at least one fit");
         }
         return fits;
     }
@@ -304,7 +304,7 @@ internal static partial class Text
             return line;
         }
 
-        private EsfException Error(string message) => new(message, number);
+        private EsfFormatException Error(string message) => new(message, number);
 
         private int Peek() => i < s.Length ? s[i] : End;
 

@@ -101,7 +101,7 @@ public class InternalTest
     [Theory]
     [MemberData(nameof(InvalidBinary))]
     public void LoadInvalidBinary(byte[] data, string message) =>
-        Assert.Contains(message, Assert.Throws<EsfException>(() => Esf.Load(data, Catalog)).Message, StringComparison.Ordinal);
+        Assert.Contains(message, Assert.ThrowsAny<EsfException>(() => Esf.Load(data, Catalog)).Message, StringComparison.Ordinal);
 
     [Theory]
     [InlineData(new byte[] { 0x11, 0, 0, 0, 0, 0, 0, 0, 0 })]

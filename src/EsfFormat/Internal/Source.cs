@@ -13,7 +13,7 @@ internal static class Source
     {
         if (fits.Count == 0)
         {
-            throw new EsfException("a document holds at least one fit");
+            throw new EsfFormatException("a document holds at least one fit");
         }
         var text = new StringBuilder();
         var where = new List<(int, int?)>();
@@ -27,7 +27,7 @@ internal static class Source
             }
             catch (EsfException e)
             {
-                throw new EsfException(e.Reason, fitNumber: n);
+                throw e.At(n, null);
             }
             where.Add((n, null));
             where.Add((n, null));
@@ -39,7 +39,7 @@ internal static class Source
                 }
                 catch (EsfException e)
                 {
-                    throw new EsfException(e.Reason, fitNumber: n, entryNumber: m);
+                    throw e.At(n, m);
                 }
                 where.Add((n, m));
             }
@@ -60,7 +60,7 @@ internal static class Source
             }
             catch (EsfException e)
             {
-                throw new EsfException(e.Reason, fitNumber: n);
+                throw e.At(n, null);
             }
             for (var m = 1; m <= given.Entries.Count; m++)
             {
@@ -77,13 +77,13 @@ internal static class Source
                     var got = item.Overrides.Select(o => o.Attribute.Id);
                     if (!got.SequenceEqual(entry.Overrides.Keys))
                     {
-                        throw new EsfException(
+                        throw new EsfRuleException(
                             $"attribute IDs [{string.Join(", ", entry.Overrides.Keys)}] resolve to [{string.Join(", ", got)}]");
                     }
                 }
                 catch (EsfException e)
                 {
-                    throw new EsfException(e.Reason, fitNumber: n, entryNumber: m);
+                    throw e.At(n, m);
                 }
             }
         }
@@ -93,7 +93,7 @@ internal static class Source
     {
         if (text.AsSpan().ContainsAny('\r', '\n'))
         {
-            throw new EsfException("a fit name contains CR or LF");
+            throw new EsfFormatException("a fit name contains CR or LF");
         }
         try
         {
@@ -101,14 +101,14 @@ internal static class Source
         }
         catch (EncoderFallbackException)
         {
-            throw new EsfException("a fit name is not valid UTF-8");
+            throw new EsfFormatException("a fit name is not valid UTF-8");
         }
         return Canonical.Quote(text);
     }
 
     private static string TypeName(ICatalog catalog, int typeId, string what)
     {
-        var type = catalog.TypeById(typeId) ?? throw new EsfException($"unknown {what} type ID {typeId}");
+        var type = catalog.TypeById(typeId) ?? throw new EsfCatalogException($"unknown {what} type ID {typeId}");
         return Canonical.QuoteType(type.Name);
     }
 
@@ -130,24 +130,24 @@ internal static class Source
     {
         if (e.Count == 0 || e.ChargeCount == 0)
         {
-            throw new EsfException("a count must be at least 1");
+            throw new EsfRuleException("a count must be at least 1");
         }
         if (e.Slot == 0)
         {
-            throw new EsfException("a slot must be at least 1");
+            throw new EsfRuleException("a slot must be at least 1");
         }
         var rack = e.Location is { } location && location.ToPlace().IsRack();
         if (e.Slot is not null && !rack)
         {
-            throw new EsfException("a slot needs the rack it is in");
+            throw new EsfRuleException("a slot needs the rack it is in");
         }
         if (e.Type is not null && e.Slot is null && rack)
         {
-            throw new EsfException("an item names a rack only to pin a slot");
+            throw new EsfRuleException("an item names a rack only to pin a slot");
         }
         if (e.ChargeCount is not null && e.Charge is null)
         {
-            throw new EsfException("a charge count is set without a charge");
+            throw new EsfRuleException("a charge count is set without a charge");
         }
 
         if (e.Count is not null)
@@ -193,10 +193,10 @@ internal static class Source
 
     private static Func<KeyValuePair<int, double>, string> Override(ICatalog catalog) => o =>
     {
-        var attribute = catalog.AttributeById(o.Key) ?? throw new EsfException($"unknown attribute ID {o.Key}");
+        var attribute = catalog.AttributeById(o.Key) ?? throw new EsfCatalogException($"unknown attribute ID {o.Key}");
         if (!double.IsFinite(o.Value))
         {
-            throw new EsfException("an override value is not finite");
+            throw new EsfRuleException("an override value is not finite");
         }
         return $"{attribute.Name} {Number.Format(o.Value)}";
     };
@@ -205,7 +205,7 @@ internal static class Source
     {
         if (got != want)
         {
-            throw new EsfException($"{what} ID {want} is not what its name resolves to ({got})");
+            throw new EsfRuleException($"{what} ID {want} is not what its name resolves to ({got})");
         }
     }
 }

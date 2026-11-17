@@ -53,13 +53,13 @@ internal static class Binary
             }
             if (field.Wire != WireType.Len)
             {
-                throw new EsfException("binary: Document.fits has the wrong wire type");
+                throw new EsfFormatException("binary: Document.fits has the wrong wire type");
             }
             fits.Add(DecodeFit(field.Bytes));
         }
         if (fits.Count == 0)
         {
-            throw new EsfException("binary: a document holds at least one fit");
+            throw new EsfFormatException("binary: a document holds at least one fit");
         }
         return fits;
     }
@@ -139,7 +139,7 @@ internal static class Binary
         }
         if (version != 1)
         {
-            throw new EsfException($"binary: unsupported Fit.version {version}");
+            throw new EsfFormatException($"binary: unsupported Fit.version {version}");
         }
         return new EsfFit { Hull = hull, Name = name, Mode = mode, Entries = entries };
     }
@@ -202,14 +202,14 @@ internal static class Binary
         }
         if (attributes.Count != values.Count)
         {
-            throw new EsfException("binary: override fields have different lengths");
+            throw new EsfFormatException("binary: override fields have different lengths");
         }
         var overrides = new Dictionary<int, double>(attributes.Count);
         for (var i = 0; i < attributes.Count; i++)
         {
             if (!overrides.TryAdd(attributes[i], values[i]))
             {
-                throw new EsfException("binary: an attribute is overridden twice");
+                throw new EsfRuleException("binary: an attribute is overridden twice");
             }
         }
         return new Entry(type)
@@ -226,10 +226,10 @@ internal static class Binary
     }
 
     private static uint UInt32(ulong value, string what) =>
-        value <= uint.MaxValue ? (uint)value : throw new EsfException($"binary: {what} is out of range");
+        value <= uint.MaxValue ? (uint)value : throw new EsfFormatException($"binary: {what} is out of range");
 
     private static int Id(ulong value, string what) =>
-        value <= int.MaxValue ? (int)value : throw new EsfException($"binary: {what} is out of range");
+        value <= int.MaxValue ? (int)value : throw new EsfFormatException($"binary: {what} is out of range");
 
     private static string? String(ReadOnlySpan<byte> payload, string what)
     {
@@ -240,7 +240,7 @@ internal static class Binary
         }
         catch (DecoderFallbackException)
         {
-            throw new EsfException($"binary: {what} is not valid UTF-8");
+            throw new EsfFormatException($"binary: {what} is not valid UTF-8");
         }
     }
 
@@ -249,9 +249,9 @@ internal static class Binary
         {
             0 => null,
             _ when value <= last => (T)Enum.ToObject(typeof(T), value),
-            _ => throw new EsfException($"binary: unknown {what} value {value}"),
+            _ => throw new EsfFormatException($"binary: unknown {what} value {value}"),
         };
 
-    private static EsfException NotInSchema(string what) =>
+    private static EsfFormatException NotInSchema(string what) =>
         new($"binary: {what} has a field that is not in the schema");
 }
