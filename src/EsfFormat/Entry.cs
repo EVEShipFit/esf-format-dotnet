@@ -54,7 +54,7 @@ public sealed record Entry(int? Type)
     public int? Mutaplasmid { get; init; }
 
     /// <summary>
-    /// Attribute values that replace the type's own, by attribute ID, like 20 (speedFactor) to 524.0.
+    /// Dogma attribute values that replace the type's own, by attribute ID, like 20 (speedFactor) to 524.0.
     /// </summary>
     /// <remarks>
     /// Each value is the new base value, not a change on top of it. Attributes not listed

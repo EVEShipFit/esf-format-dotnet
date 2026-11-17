@@ -70,7 +70,7 @@ Each `Entry` is one line of the fit. `null` means the default:
 | `Charge` | The charge loaded. | |
 | `ChargeCount` | How many charges. | A full load. |
 | `Mutaplasmid` | The mutaplasmid applied. | |
-| `Overrides` | Attribute values by attribute ID. | |
+| `Overrides` | Dogma attribute values by attribute ID. | |
 | `State` | `State.Off`, `On` or `Heat`. | Active if the type can be, else on. |
 | `Location` | `Cargo`, `Bay` or another hold; a rack for an empty slot, or with `Slot`. | Where the type goes by default. |
 | `Slot` | The slot in the `Location` rack, counting from 1. Not with `Count`, except for a fighter in a `Tube`; the item must go in that rack, and each slot is pinned once. `Load()` never sets it: it returns the rack in slot order, with empty slots between. | The next free slot. |
@@ -80,7 +80,7 @@ Each `Entry` is one line of the fit. `null` means the default:
 ## The Catalog
 
 The library holds no game data. You give it an `ICatalog`: an object that
-looks up types and attributes in your copy of the SDE.
+looks up types and dogma attributes in your copy of the SDE.
 
 ```csharp
 public sealed class MyCatalog : ICatalog
@@ -102,7 +102,7 @@ from. `Sde` has helpers for the parts that take more than a lookup:
 ```csharp
 var typeNames = Sde.NameIndex(types, t => t.Id, t => t.Name.En, t => t.Published);
 
-// effects: effectID -> effectCategoryID; attributes: attributeID -> value
+// effects: effectID -> effectCategoryID; attributes: dogma attributeID -> value
 
 new TypeRecord(
     t.Id,
