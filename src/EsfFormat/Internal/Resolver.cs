@@ -107,8 +107,20 @@ internal static class Resolver
     public static string ModeName(TypeRecord hull, TypeRecord mode) =>
         mode.Name.AsSpan(Math.Min(hull.Name.Length, mode.Name.Length)).TrimStart(' ').ToString();
 
-    private static TypeRecord LookUp(ICatalog catalog, string name, int line) =>
-        catalog.TypeByName(Names.Fold(name)) ?? throw new EsfCatalogException($"unknown type '{name}'", line);
+    private static TypeRecord LookUp(ICatalog catalog, TypeRef type, int line)
+    {
+        if (type.Id is { } id)
+        {
+            var found = (id <= int.MaxValue ? catalog.TypeById((int)id) : null)
+                ?? throw new EsfCatalogException($"unknown type ID #{id}", line);
+            if (Names.Fold(found.Name) != Names.Fold(type.Name))
+            {
+                throw new EsfRuleException($"type ID #{id} is '{found.Name}', not '{type.Name}'", line);
+            }
+            return found;
+        }
+        return catalog.TypeByName(Names.Fold(type.Name)) ?? throw new EsfCatalogException($"unknown type '{type.Name}'", line);
+    }
 
     private static T Pick<T>(List<T> candidates, string given, string what, int line, Func<T, string> name) =>
         candidates.Count switch
@@ -127,7 +139,7 @@ internal static class Resolver
             return new Fit(block, null, null, true);
         }
 
-        var hull = LookUp(catalog, block.Hull, block.HullLine);
+        var hull = LookUp(catalog, block.Hull.Value, block.HullLine);
         if (!hull.Kind.CanBeHull())
         {
             throw new EsfRuleException($"'{hull.Name}' is not a ship, structure or container", block.HullLine);
@@ -164,7 +176,7 @@ internal static class Resolver
         }
 
         var line = (ItemLine)text;
-        var type = LookUp(catalog, line.Name, n);
+        var type = LookUp(catalog, line.Type, n);
         var kind = type.Kind;
         if (kind == Kind.Mode)
         {
@@ -223,9 +235,9 @@ internal static class Resolver
             }
         }
 
-        if (line.Charge is not null)
+        if (line.Charge is { } charge)
         {
-            item.Charge = LookUp(catalog, line.Charge, n);
+            item.Charge = LookUp(catalog, charge, n);
             if (item.Charge.Kind != Kind.Charge)
             {
                 throw new EsfRuleException($"'{item.Charge.Name}' is not a charge", n);

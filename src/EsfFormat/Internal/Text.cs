@@ -19,13 +19,16 @@ internal sealed class EmptyLine(int number, Location rack) : Line(number)
     public Location Rack { get; } = rack;
 }
 
-internal sealed class ItemLine(int number, string name) : Line(number)
+/// <summary>A type as written: a name, and optionally a type ID.</summary>
+internal readonly record struct TypeRef(string Name, uint? Id = null);
+
+internal sealed class ItemLine(int number, TypeRef type) : Line(number)
 {
-    public string Name { get; } = name;
+    public TypeRef Type { get; } = type;
 
     public string? FitName { get; set; }
 
-    public string? Charge { get; set; }
+    public TypeRef? Charge { get; set; }
 
     public uint? ChargeCount { get; set; }
 
@@ -44,7 +47,7 @@ internal sealed class FitBlock(int number, int hullLine)
 
     public int HullLine { get; } = hullLine;
 
-    public string? Hull { get; set; }
+    public TypeRef? Hull { get; set; }
 
     public string? FitName { get; set; }
 
@@ -60,6 +63,8 @@ internal static partial class Text
 
     public static bool IsCount(ReadOnlySpan<char> token) =>
         token.Length > 1 && token[^1] == 'x' && !token[..^1].ContainsAnyExceptInRange('0', '9');
+
+    public static bool EndsInTypeId(string name) => NameWithIdPattern().IsMatch(name);
 
     /// <summary>Split a text document into fits; other blocks are skipped.</summary>
     public static List<FitBlock> Parse(string text)
@@ -141,6 +146,12 @@ internal static partial class Text
     [GeneratedRegex(@"\A *%([a-z][a-z0-9-]*)/([0-9]+) *\z")]
     private static partial Regex HeaderPattern();
 
+    [GeneratedRegex(@"\G#([0-9]+)")]
+    private static partial Regex TypeIdPattern();
+
+    [GeneratedRegex(@"\A(.*[^ ])#([0-9]+)\z")]
+    private static partial Regex NameWithIdPattern();
+
     [GeneratedRegex(@"\G!(off|on|heat)")]
     private static partial Regex StatePattern();
 
@@ -179,7 +190,7 @@ internal static partial class Text
             {
                 throw Error("the hull line cannot have a count");
             }
-            block.Hull = TypeName();
+            block.Hull = TypeRef();
             var more = NextElement();
             if (more && Peek() == '"')
             {
@@ -224,7 +235,7 @@ internal static partial class Text
                 return new EmptyLine(number, rack) { Count = count, Index = index };
             }
 
-            var line = new ItemLine(number, TypeName()) { Count = count };
+            var line = new ItemLine(number, TypeRef()) { Count = count };
             var more = NextElement();
 
             if (more && Peek() == '"')
@@ -255,7 +266,7 @@ internal static partial class Text
                 {
                     i++;
                     line.ChargeCount = Count();
-                    line.Charge = TypeName();
+                    line.Charge = TypeRef();
                     stage = 1;
                 }
                 else if (c == '+' && stage < 2)
@@ -446,6 +457,33 @@ internal static partial class Text
                 }
             }
         }
+
+        private TypeRef TypeRef()
+        {
+            if (Peek() == '"')
+            {
+                var quoted = Quoted();
+                var id = TypeIdPattern().Match(s, i);
+                if (!id.Success)
+                {
+                    return new TypeRef(quoted);
+                }
+                i += id.Length;
+                return new TypeRef(quoted, TypeId(id.Groups[1].Value));
+            }
+            var name = TypeName();
+            var match = NameWithIdPattern().Match(name);
+            if (!match.Success)
+            {
+                return new TypeRef(name);
+            }
+            return new TypeRef(match.Groups[1].Value, TypeId(match.Groups[2].Value));
+        }
+
+        private uint TypeId(string digits) =>
+            uint.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+                ? id
+                : throw Error("a type ID is too large");
 
         private (Location Location, uint? Index) Location()
         {
