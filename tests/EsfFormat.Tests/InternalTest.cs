@@ -57,7 +57,9 @@ public class InternalTest
     [InlineData("Damage  Control", true)]
     [InlineData("Damage @Control", true)]
     [InlineData("Damage Control ", true)]
-    [InlineData("#85282", true)]
+    [InlineData("Foo#123", true)]
+    [InlineData("#85282", false)]
+    [InlineData("Swarm Overmind #0102", false)]
     [InlineData("#System", false)]
     public void NeedsQuotes(string name, bool quoted) => Assert.Equal(quoted, Canonical.NeedsQuotes(name));
 

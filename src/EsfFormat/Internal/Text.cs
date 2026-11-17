@@ -19,7 +19,7 @@ internal sealed class EmptyLine(int number, Location rack) : Line(number)
     public Location Rack { get; } = rack;
 }
 
-/// <summary>A type as written: a name, or a type ID.</summary>
+/// <summary>A type as written: a name, and optionally a type ID.</summary>
 internal readonly record struct TypeRef(string Name, uint? Id = null);
 
 internal sealed class ItemLine(int number, TypeRef type) : Line(number)
@@ -64,8 +64,7 @@ internal static partial class Text
     public static bool IsCount(ReadOnlySpan<char> token) =>
         token.Length > 1 && token[^1] == 'x' && !token[..^1].ContainsAnyExceptInRange('0', '9');
 
-    public static bool IsTypeId(ReadOnlySpan<char> name) =>
-        name.Length > 1 && name[0] == '#' && !name[1..].ContainsAnyExceptInRange('0', '9');
+    public static bool EndsInTypeId(string name) => NameWithIdPattern().IsMatch(name);
 
     /// <summary>Split a text document into fits; other blocks are skipped.</summary>
     public static List<FitBlock> Parse(string text)
@@ -146,6 +145,12 @@ internal static partial class Text
 
     [GeneratedRegex(@"\A *%([a-z][a-z0-9-]*)/([0-9]+) *\z")]
     private static partial Regex HeaderPattern();
+
+    [GeneratedRegex(@"\G#([0-9]+)")]
+    private static partial Regex TypeIdPattern();
+
+    [GeneratedRegex(@"\A(.*[^ ])#([0-9]+)\z")]
+    private static partial Regex NameWithIdPattern();
 
     [GeneratedRegex(@"\G!(off|on|heat)")]
     private static partial Regex StatePattern();
@@ -455,18 +460,30 @@ internal static partial class Text
 
         private TypeRef TypeRef()
         {
-            var quoted = Peek() == '"';
+            if (Peek() == '"')
+            {
+                var quoted = Quoted();
+                var id = TypeIdPattern().Match(s, i);
+                if (!id.Success)
+                {
+                    return new TypeRef(quoted);
+                }
+                i += id.Length;
+                return new TypeRef(quoted, TypeId(id.Groups[1].Value));
+            }
             var name = TypeName();
-            if (quoted || !IsTypeId(name))
+            var match = NameWithIdPattern().Match(name);
+            if (!match.Success)
             {
                 return new TypeRef(name);
             }
-            if (!uint.TryParse(name.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out var id))
-            {
-                throw Error("a type ID is too large");
-            }
-            return new TypeRef(name, id);
+            return new TypeRef(match.Groups[1].Value, TypeId(match.Groups[2].Value));
         }
+
+        private uint TypeId(string digits) =>
+            uint.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out var id)
+                ? id
+                : throw Error("a type ID is too large");
 
         private (Location Location, uint? Index) Location()
         {

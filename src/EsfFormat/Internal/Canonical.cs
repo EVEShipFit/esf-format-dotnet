@@ -115,17 +115,17 @@ internal static class Canonical
         var words = name.Split(' ');
         return words[0] is "" or ['-' or '%', ..]
             || Text.IsCount(words[0])
-            || Text.IsTypeId(name)
+            || Text.EndsInTypeId(name)
             || Array.Exists(words, w => w.Length == 0 || Text.IsSigil(w[0]));
     }
 
     public static string QuoteType(string name) => NeedsQuotes(name) ? Quote(name) : name;
 
-    /// <summary>A type as text: its name, or its ID where the name resolves to another type (§6.13).</summary>
+    /// <summary>A type as text: its name, and its ID where the name resolves to another type (§6.13).</summary>
     public static string TypeRef(ICatalog catalog, TypeRecord type) =>
         catalog.TypeByName(Names.Fold(type.Name))?.Id == type.Id
             ? QuoteType(type.Name)
-            : string.Create(CultureInfo.InvariantCulture, $"#{type.Id}");
+            : string.Create(CultureInfo.InvariantCulture, $"{QuoteType(type.Name)}#{type.Id}");
 
     public static CanonFit Fit(Fit fit, ICatalog catalog)
     {

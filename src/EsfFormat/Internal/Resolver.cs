@@ -111,8 +111,13 @@ internal static class Resolver
     {
         if (type.Id is { } id)
         {
-            return (id <= int.MaxValue ? catalog.TypeById((int)id) : null)
+            var found = (id <= int.MaxValue ? catalog.TypeById((int)id) : null)
                 ?? throw new EsfCatalogException($"unknown type ID #{id}", line);
+            if (Names.Fold(found.Name) != Names.Fold(type.Name))
+            {
+                throw new EsfRuleException($"type ID #{id} is '{found.Name}', not '{type.Name}'", line);
+            }
+            return found;
         }
         return catalog.TypeByName(Names.Fold(type.Name)) ?? throw new EsfCatalogException($"unknown type '{type.Name}'", line);
     }

@@ -321,7 +321,7 @@ public class ApiTest
     {
         var rifter = Fit(new Entry(AvatarUnpublished));
         var text = Esf.Save([rifter], Catalog);
-        Assert.Equal("%esf/1\nRifter\n\n#50097\n", text);
+        Assert.Equal("%esf/1\nRifter\n\nAvatar#50097\n", text);
         Assert.Equal([rifter], Esf.Load(text, Catalog));
         Assert.Equal([rifter], Esf.Load(Esf.SaveBinary([rifter], Catalog), Catalog));
     }
@@ -330,7 +330,7 @@ public class ApiTest
     public void LoadTypeId() =>
         Assert.Equal(
             [Fit(new Entry(Autocannon) { Charge = Emp })],
-            Esf.Load("%esf/1\n#587\n#2889 :#21898\n", Catalog));
+            Esf.Load("%esf/1\nRifter#587\n200mm AutoCannon II#2889 :Republic Fleet EMP S#21898\n", Catalog));
 
     public static TheoryData<byte[], string> InvalidDocuments() => new()
     {
@@ -342,9 +342,10 @@ public class ApiTest
                 "%esf/1\nRifter\n4294967295x Damage Control II\n4294967295x Damage Control II\n"),
             "too large"
         },
-        { [.. "%esf/1\nRifter\n#4294967296\n"u8], "type ID is too large" },
-        { [.. "%esf/1\nRifter\n#999999999\n"u8], "unknown type ID" },
-        { [.. "%esf/1\nRifter\n#4294967295\n"u8], "unknown type ID" },
+        { [.. "%esf/1\nRifter#4294967296\n"u8], "type ID is too large" },
+        { [.. "%esf/1\nRifter#999999999\n"u8], "unknown type ID" },
+        { [.. "%esf/1\nRifter#4294967295\n"u8], "unknown type ID" },
+        { [.. "%esf/1\nRifter#605\n"u8], "is 'Heron', not 'Rifter'" },
     };
 
     [Theory]
