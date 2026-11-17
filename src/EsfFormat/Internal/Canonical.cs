@@ -262,7 +262,7 @@ internal static class Canonical
                 previous.Count = (previous.Count ?? 1) + (line.Count ?? 1);
                 if (previous.Count > uint.MaxValue)
                 {
-                    throw new EsfException($"lines collapse into a count of {previous.Count}, which is too large");
+                    throw new EsfRuleException($"lines collapse into a count of {previous.Count}, which is too large");
                 }
                 continue;
             }

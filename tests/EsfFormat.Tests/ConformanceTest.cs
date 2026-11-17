@@ -27,7 +27,7 @@ public class ConformanceTest
             : Esf.FromBase64Url(File.ReadAllText(Path.Combine(path, "input.b64")));
         if (name.StartsWith("invalid/", StringComparison.Ordinal))
         {
-            Assert.Throws<EsfException>(() => Esf.Load(input, catalog));
+            Assert.ThrowsAny<EsfException>(() => Esf.Load(input, catalog));
             return;
         }
 

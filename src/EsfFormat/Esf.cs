@@ -20,7 +20,7 @@ public static class Esf
         ArgumentNullException.ThrowIfNull(catalog);
         if (data.IsEmpty)
         {
-            throw new EsfException("the document is empty");
+            throw new EsfFormatException("the document is empty");
         }
         var fits = IsText(data)
             ? Canonical(Text.Parse(Decode(data)), catalog)
@@ -36,7 +36,7 @@ public static class Esf
         var bytes = new byte[Encoding.UTF8.GetMaxByteCount(data.Length)];
         if (Utf8.FromUtf16(data, bytes, out _, out var written, replaceInvalidSequences: false) != System.Buffers.OperationStatus.Done)
         {
-            throw new EsfException("not valid UTF-8");
+            throw new EsfFormatException("not valid UTF-8");
         }
         return Load(bytes.AsSpan(0, written), catalog);
     }
@@ -63,7 +63,7 @@ public static class Esf
         encoded = encoded.Trim();
         if (encoded.Length % 4 == 1 || !IsBase64Url(encoded))
         {
-            throw new EsfException("not valid base64url");
+            throw new EsfFormatException("not valid base64url");
         }
         var padded = encoded.Replace('-', '+').Replace('_', '/') + new string('=', -encoded.Length & 3);
         return Convert.FromBase64String(padded);
@@ -94,7 +94,7 @@ public static class Esf
         var status = Utf8.ToUtf16(data, chars, out var read, out var written, replaceInvalidSequences: false);
         if (status != System.Buffers.OperationStatus.Done)
         {
-            throw new EsfException($"not valid UTF-8 at byte {read}");
+            throw new EsfFormatException($"not valid UTF-8 at byte {read}");
         }
         return new string(chars, 0, written);
     }
@@ -121,7 +121,7 @@ public static class Esf
         catch (EsfException e) when (e.LineNumber is { } line)
         {
             var (fit, entry) = where[line - 1];
-            throw new EsfException(e.Reason, fitNumber: fit, entryNumber: entry);
+            throw e.At(fit, entry);
         }
     }
 }
