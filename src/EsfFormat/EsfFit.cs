@@ -9,6 +9,7 @@ public sealed record EsfFit
 {
     /// <summary>The type ID of the ship, structure or container, like 587 for the Rifter.</summary>
     /// <remarks>
+    /// Only a type whose <see cref="KindExtensions.CanBeHull"/> is true can be a hull.
     /// <see langword="null"/> for a fit without a ship, like the items in a contract: then every entry is
     /// stored in cargo, and the fit has no slots and no <see cref="Mode"/>.
     /// </remarks>

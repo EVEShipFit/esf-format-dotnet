@@ -122,6 +122,9 @@ new Entry(typeId) { Location = Esi.Location(flag) ?? Location.Cargo, Slot = Esi.
 A flag that is not inside a ship, like `Hangar`, gives `null`; the example
 puts those items in the cargo hold.
 
+Only a ship, structure or container can be a fit's hull. Check
+`catalog.TypeById(typeId)?.Kind.CanBeHull() == true` before you use a type as one.
+
 ## Tests
 
 The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format):

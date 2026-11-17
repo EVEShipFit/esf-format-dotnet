@@ -68,3 +68,13 @@ public enum Kind
     /// <summary>Anything else, like ore or a module without a slot. It goes in the cargo.</summary>
     Other,
 }
+
+/// <summary>Helpers for <see cref="Kind"/>.</summary>
+public static class KindExtensions
+{
+    /// <summary>
+    /// Whether a type of this kind can be the <see cref="EsfFit.Hull"/> of a fit: true for
+    /// <see cref="Kind.Hull"/> and <see cref="Kind.Container"/> only.
+    /// </summary>
+    public static bool CanBeHull(this Kind kind) => kind is Kind.Hull or Kind.Container;
+}

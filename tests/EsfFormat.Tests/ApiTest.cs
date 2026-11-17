@@ -124,6 +124,10 @@ public class ApiTest
     }
 
     [Fact]
+    public void OnlyHullsAndContainersCanBeHulls() =>
+        Assert.Equal([Kind.Hull, Kind.Container], Enum.GetValues<Kind>().Where(k => k.CanBeHull()));
+
+    [Fact]
     public void LoadText() =>
         Assert.Equal([new EsfFit { Hull = Rifter }], Esf.Load("%esf/1\nRifter\n", Catalog));
 
