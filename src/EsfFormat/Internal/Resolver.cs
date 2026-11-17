@@ -128,7 +128,7 @@ internal static class Resolver
         }
 
         var hull = LookUp(catalog, block.Hull, block.HullLine);
-        if (hull.Kind is not (Kind.Hull or Kind.Container))
+        if (!hull.Kind.CanBeHull())
         {
             throw new EsfException($"'{hull.Name}' is not a ship, structure or container", block.HullLine);
         }
@@ -175,7 +175,7 @@ internal static class Resolver
 
         if (line.FitName is not null)
         {
-            if (kind is not (Kind.Hull or Kind.Container))
+            if (!kind.CanBeHull())
             {
                 throw new EsfException($"'{type.Name}' cannot take a fit name", n);
             }

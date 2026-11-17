@@ -27,7 +27,7 @@ public sealed record Entry(int? Type)
 
     /// <summary>The name of another fit in the same list, which this entry carries.</summary>
     /// <remarks>
-    /// Only for a ship, structure or container. The other fit must have this entry's
+    /// Only for a type whose <see cref="KindExtensions.CanBeHull"/> is true. The other fit must have this entry's
     /// <see cref="Type"/> as its <see cref="EsfFit.Hull"/> and this as its <see cref="EsfFit.Name"/>, ignoring case.
     /// For example, a Heron with fit name "Scout" and <see cref="EsfFormat.Location.Frigate"/> carries that fit in the
     /// Frigate Escape Bay. <see langword="null"/> means an unfitted ship or an empty container.
