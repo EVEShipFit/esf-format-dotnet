@@ -38,7 +38,7 @@ public interface ICatalog
     /// <summary>Finds a type by its ID. Return <see langword="null"/> if there is no type with this ID.</summary>
     TypeRecord? TypeById(int typeId);
 
-    /// <summary>Finds an attribute by its name, like "speedfactor".</summary>
+    /// <summary>Finds a dogma attribute by its name, like "speedfactor".</summary>
     /// <remarks>
     /// <para>Used to read attribute overrides, like the rolls on an abyssal module.</para>
     /// <para>
@@ -50,7 +50,7 @@ public interface ICatalog
     /// </remarks>
     AttributeRecord? AttributeByName(string foldedName);
 
-    /// <summary>Finds an attribute by its ID.</summary>
+    /// <summary>Finds a dogma attribute by its ID.</summary>
     /// <remarks>
     /// <para>Used to write attribute overrides, like the rolls on an abyssal module.</para>
     /// <para>Return <see langword="null"/> if there is no attribute with this ID.</para>

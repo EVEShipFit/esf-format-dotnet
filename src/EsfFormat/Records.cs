@@ -6,7 +6,7 @@ namespace EveShipFit.EsfFormat;
 /// and <see cref="SquadronSize"/> also need <c>groups.jsonl</c>, <c>typeDogma.jsonl</c> and
 /// <c>dogmaEffects.jsonl</c>, through the helpers in <see cref="Sde"/>.
 /// Include every type in <c>types.jsonl</c>. A type with no row in <c>typeDogma.jsonl</c> has no effects
-/// and no attributes: give the helpers an empty collection or dictionary.
+/// and no dogma attributes: give the helpers an empty collection or dictionary.
 /// </remarks>
 /// <param name="Id">The type ID, like 587 for the Rifter. In the SDE this is <c>_key</c>.</param>
 /// <param name="Name">The English name, like "Rifter". In the SDE this is <c>name.en</c>.</param>
@@ -23,7 +23,7 @@ namespace EveShipFit.EsfFormat;
 /// <param name="Volume">How much room one of it takes, in m³. In the SDE this is <c>volume</c>. Use 0 when the type has none.</param>
 /// <param name="SquadronSize">
 /// For a fighter, how many make up a full squadron. <see langword="null"/> for anything else.
-/// In the SDE this is the attribute <c>fighterSquadronMaxSize</c>; <see cref="Sde.SquadronSize"/> reads it for you.
+/// In the SDE this is the dogma attribute <c>fighterSquadronMaxSize</c>; <see cref="Sde.SquadronSize"/> reads it for you.
 /// </param>
 public sealed record TypeRecord(
     int Id,
@@ -50,7 +50,7 @@ public sealed record AttributeRecord(int Id, string Name);
 /// </remarks>
 /// <param name="Type">The mutaplasmid's own type: the type whose ID is the entry's <c>_key</c>.</param>
 /// <param name="Rolls">
-/// The attributes the mutaplasmid changes, each with the base type's value before the change.
+/// The dogma attributes the mutaplasmid changes, each with the base type's value before the change.
 /// The attribute IDs are the <c>_key</c> of each item in the entry's <c>attributeIDs</c>; its <c>min</c> and
 /// <c>max</c> are not needed. Each value is the base type's value of that attribute in <c>typeDogma.jsonl</c>.
 /// When the base type does not have it, use the attribute's <c>defaultValue</c> in
