@@ -171,7 +171,7 @@ Only a ship, structure or container can be a fit's hull. Check
 The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format):
 
 ```
-git clone --branch v1.3 https://github.com/EVEShipFit/esf-format
+git clone --branch load-document https://github.com/EVEShipFit/esf-format
 dotnet build tests/EsfFormat.Program -c Release
 uv run --project esf-format/tools esf-test -- dotnet tests/EsfFormat.Program/bin/Release/net10.0/esf-program.dll
 dotnet format --verify-no-changes

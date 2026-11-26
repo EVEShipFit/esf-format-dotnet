@@ -479,8 +479,20 @@ public class ApiTest
         Assert.Equal(message, Assert.Throws<EsfFormatException>(() => Esf.LoadDocument(text, Catalog)).Message);
 
     [Fact]
-    public void LoadIgnoresExtraVersion() =>
-        Assert.Single(Esf.Load("%fleet/4294967296\n%esf/1\nRifter\n", Catalog));
+    public void HugeExtraVersion()
+    {
+        const string text = "%esf/1\nRifter\n%fleet/99999999999\n";
+        Assert.Equal([Fit()], Esf.Load(text, Catalog));
+        Assert.Equal(
+            "line 3: the version of %fleet is too large",
+            Assert.Throws<EsfFormatException>(() => Esf.LoadDocument(text, Catalog)).Message);
+    }
+
+    [Fact]
+    public void ExtraVersionLeadingZeros() =>
+        Assert.Equal(
+            [new TextExtra("fleet", 7, ""), new TextExtra("x", uint.MaxValue, "")],
+            Esf.LoadDocument("%esf/1\nRifter\n%fleet/007\n%x/0004294967295\n", Catalog).Extra);
 
     [Fact]
     public void ExtraEquality()

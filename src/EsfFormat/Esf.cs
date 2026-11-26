@@ -36,6 +36,10 @@ public static class Esf
     /// <see cref="BinaryExtra"/>. A binary field of any other wire type is still skipped.
     /// </para>
     /// <para>A <c>%esf/N</c> header with a version other than 1 is an error, as with Load.</para>
+    /// <para>
+    /// The version of another block must fit in a <see cref="uint"/>, so <c>%fleet/99999999999</c> is an error here,
+    /// while Load skips that block. Leading zeros are allowed: <c>%fleet/007</c> is version 7.
+    /// </para>
     /// </remarks>
     /// <exception cref="EsfException">
     /// The document breaks a rule of esf/1, or the version in a block's header is more than <see cref="uint.MaxValue"/>.
