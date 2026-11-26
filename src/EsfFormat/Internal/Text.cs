@@ -56,6 +56,9 @@ internal sealed class FitBlock(int number, int hullLine)
     public List<Line> Lines { get; } = [];
 }
 
+/// <summary>A block that is not a fit: its header line, name and version, and the text after its header line.</summary>
+internal sealed record OtherBlock(int Line, string Name, string Version, string Text);
+
 /// <summary>Reading the text form into lines, without a Catalog (SPEC §4.1, grammar.ebnf).</summary>
 internal static partial class Text
 {
@@ -66,8 +69,8 @@ internal static partial class Text
 
     public static bool EndsInTypeId(string name) => NameWithIdPattern().IsMatch(name);
 
-    /// <summary>Split a text document into fits; other blocks are skipped.</summary>
-    public static List<FitBlock> Parse(string text)
+    /// <summary>Split a text document into fits and other blocks.</summary>
+    public static List<FitBlock> Parse(string text, List<OtherBlock>? others = null)
     {
         var lines = text.Split('\n');
         var count = lines[^1].Length == 0 ? lines.Length - 1 : lines.Length;
@@ -76,9 +79,13 @@ internal static partial class Text
         FitBlock? current = null;
         int? header = null;
         var inBlock = false;
+        (int Line, string Name, string Version, int Start)? other = null;
+        var start = 0;
         for (var i = 0; i < count; i++)
         {
             var number = i + 1;
+            var lineStart = start;
+            start = Math.Min(start + lines[i].Length + 1, text.Length);
             var raw = lines[i].EndsWith('\r') ? lines[i][..^1] : lines[i];
             if (raw.Contains('\r', StringComparison.Ordinal))
             {
@@ -97,6 +104,11 @@ internal static partial class Text
                 {
                     throw new EsfFormatException("a fit needs a hull line", header);
                 }
+                if (other is { } done)
+                {
+                    others?.Add(new OtherBlock(done.Line, done.Name, done.Version, text[done.Start..lineStart]));
+                    other = null;
+                }
                 inBlock = true;
                 current = null;
                 if (match.Groups[1].ValueSpan is "esf")
@@ -106,6 +118,10 @@ internal static partial class Text
                         throw new EsfFormatException($"unsupported version esf/{match.Groups[2].Value}", number);
                     }
                     header = number;
+                }
+                else
+                {
+                    other = (number, match.Groups[1].Value, match.Groups[2].Value, start);
                 }
                 continue;
             }
@@ -135,6 +151,10 @@ internal static partial class Text
         if (header is not null)
         {
             throw new EsfFormatException("a fit needs a hull line", header);
+        }
+        if (other is { } last)
+        {
+            others?.Add(new OtherBlock(last.Line, last.Name, last.Version, text[last.Start..]));
         }
         if (fits.Count == 0)
         {

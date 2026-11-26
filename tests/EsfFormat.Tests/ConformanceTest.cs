@@ -1,3 +1,6 @@
+using Tomlyn;
+using Tomlyn.Model;
+
 namespace EveShipFit.EsfFormat.Tests;
 
 /// <summary>The esf-format test cases, the way its runner checks them.</summary>
@@ -38,5 +41,23 @@ public class ConformanceTest
         Assert.Equal(canonical, Esf.Save(Esf.Load(canonical, catalog), catalog));
         Assert.Equal(Convert.ToHexString(binary), Convert.ToHexString(Esf.SaveBinary(fits, catalog)));
         Assert.Equal(canonical, Esf.Save(Esf.Load(binary, catalog), catalog));
+
+        var document = Esf.LoadDocument(input, catalog);
+        Assert.Equal(fits, document.Fits);
+        Assert.Equal(Extra(Path.Combine(path, "extra.toml")), document.Extra);
     }
+
+    private static List<Extra> Extra(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+        var model = TomlSerializer.Deserialize<TomlTable>(File.ReadAllText(path))!;
+        return ((TomlTableArray)model["extra"]).Select(Extra).ToList();
+    }
+
+    private static Extra Extra(TomlTable item) => item.ContainsKey("field")
+        ? new BinaryExtra((uint)(long)item["field"], Esf.FromBase64Url((string)item["bytes"]))
+        : new TextExtra((string)item["name"], (uint)(long)item["version"], (string)item["text"]);
 }

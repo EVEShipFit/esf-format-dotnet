@@ -434,6 +434,82 @@ public class ApiTest
     public void Fold(string name, string folded) => Assert.Equal(folded, Esf.Fold(name));
 
     [Fact]
+    public void BinaryFieldRoundTrip()
+    {
+        var fits = new[] { Fit(new Entry(DamageControl)) };
+        byte[] data = [.. Esf.SaveBinary(fits, Catalog), .. Esf.BinaryField(2, [8, 1]), .. Esf.BinaryField(536870911, [])];
+        var document = Esf.LoadDocument(data, Catalog);
+        Assert.Equal(fits, document.Fits);
+        Assert.Equal([new BinaryExtra(2, [8, 1]), new BinaryExtra(536870911, [])], document.Extra);
+        Assert.Equal(fits, Esf.Load(data, Catalog));
+    }
+
+    [Theory]
+    [InlineData(0u)]
+    [InlineData(1u)]
+    [InlineData(536870912u)]
+    [InlineData(uint.MaxValue)]
+    public void BinaryFieldOutOfRange(uint field) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => Esf.BinaryField(field, [1]));
+
+    [Fact]
+    public void LoadDocumentText()
+    {
+        var document = Esf.LoadDocument("%fleet/1\r\nwings\n%esf/1\nRifter\n %x/4294967295 \n", Catalog);
+        Assert.Equal([Fit()], document.Fits);
+        Assert.Equal([new TextExtra("fleet", 1, "wings\n"), new TextExtra("x", uint.MaxValue, "")], document.Extra);
+    }
+
+    [Fact]
+    public void LoadDocumentWithoutExtra() =>
+        Assert.Empty(Esf.LoadDocument("%esf/1\nRifter\n", Catalog).Extra);
+
+    [Fact]
+    public void LoadDocumentSkipsOtherWireTypes()
+    {
+        byte[] data = [.. Esf.SaveBinary([Fit()], Catalog), 0x10, 0x05, 0x1D, 1, 2, 3, 4, 0x13, 0x0A, 0x01, 0xFF, 0x14];
+        Assert.Empty(Esf.LoadDocument(data, Catalog).Extra);
+    }
+
+    [Theory]
+    [InlineData("%fleet/4294967296\n%esf/1\nRifter\n", "line 1: the version of %fleet is too large")]
+    [InlineData("%esf/2\nRifter\n", "line 1: unsupported version esf/2")]
+    [InlineData("%fleet/1\n", "a document holds at least one fit")]
+    public void LoadDocumentInvalid(string text, string message) =>
+        Assert.Equal(message, Assert.Throws<EsfFormatException>(() => Esf.LoadDocument(text, Catalog)).Message);
+
+    [Fact]
+    public void HugeExtraVersion()
+    {
+        const string text = "%esf/1\nRifter\n%fleet/99999999999\n";
+        Assert.Equal([Fit()], Esf.Load(text, Catalog));
+        Assert.Equal(
+            "line 3: the version of %fleet is too large",
+            Assert.Throws<EsfFormatException>(() => Esf.LoadDocument(text, Catalog)).Message);
+    }
+
+    [Fact]
+    public void ExtraVersionLeadingZeros() =>
+        Assert.Equal(
+            [new TextExtra("fleet", 7, ""), new TextExtra("x", uint.MaxValue, "")],
+            Esf.LoadDocument("%esf/1\nRifter\n%fleet/007\n%x/0004294967295\n", Catalog).Extra);
+
+    [Fact]
+    public void ExtraEquality()
+    {
+        Assert.Equal(new BinaryExtra(2, [1, 2]), new BinaryExtra(2, [1, 2]));
+        Assert.Equal(new BinaryExtra(2, [1, 2]).GetHashCode(), new BinaryExtra(2, [1, 2]).GetHashCode());
+        Assert.NotEqual(new BinaryExtra(2, [1, 2]), new BinaryExtra(2, [1, 3]));
+        Assert.NotEqual(new BinaryExtra(2, [1]), new BinaryExtra(3, [1]));
+        Assert.NotEqual<Extra>(new BinaryExtra(2, []), new TextExtra("x", 2, ""));
+        var document = new EsfDocument { Fits = [Fit()], Extra = [new BinaryExtra(2, [1])] };
+        Assert.Equal(document, document with { Extra = [new BinaryExtra(2, [1])] });
+        Assert.Equal(document.GetHashCode(), (document with { Extra = [new BinaryExtra(2, [1])] }).GetHashCode());
+        Assert.NotEqual(document, document with { Extra = [] });
+        Assert.False(document.Equals(null));
+    }
+
+    [Fact]
     public void Equality()
     {
         var entry = new Entry(DamageControl) { Overrides = new Dictionary<int, double> { [50] = 1, [974] = 2 } };
@@ -460,6 +536,8 @@ public class ApiTest
     {
         Assert.Throws<ArgumentNullException>(() => Esf.Load((string)null!, Catalog));
         Assert.Throws<ArgumentNullException>(() => Esf.Load("%esf/1\nRifter\n"u8, null!));
+        Assert.Throws<ArgumentNullException>(() => Esf.LoadDocument((string)null!, Catalog));
+        Assert.Throws<ArgumentNullException>(() => Esf.LoadDocument("%esf/1\nRifter\n"u8, null!));
         Assert.Throws<ArgumentNullException>(() => Esf.Save(null!, Catalog));
         Assert.Throws<ArgumentNullException>(() => Esf.Save([], null!));
         Assert.Throws<ArgumentNullException>(() => Esf.FromBase64Url(null!));

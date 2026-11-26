@@ -40,7 +40,14 @@ internal static class Binary
         return document.Written.ToArray();
     }
 
-    public static List<EsfFit> Decode(ReadOnlySpan<byte> data)
+    public static byte[] Field(int field, ReadOnlySpan<byte> bytes)
+    {
+        var writer = new WireWriter();
+        writer.Record(field, bytes);
+        return writer.Written.ToArray();
+    }
+
+    public static List<EsfFit> Decode(ReadOnlySpan<byte> data, List<BinaryExtra>? others = null)
     {
         var fits = new List<EsfFit>();
         var reader = new WireReader(data);
@@ -49,6 +56,10 @@ internal static class Binary
             var field = reader.Next();
             if (field.Number != 1)
             {
+                if (field.Wire == WireType.Len)
+                {
+                    others?.Add(new BinaryExtra((uint)field.Number, field.Bytes.ToArray()));
+                }
                 continue;
             }
             if (field.Wire != WireType.Len)
