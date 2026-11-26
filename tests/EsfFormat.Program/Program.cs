@@ -1,6 +1,7 @@
-// The program the esf-format test runner calls: esf-program check|canonical|binary.
+// The program the esf-format test runner calls: esf-program check|canonical|binary|extra.
 
 using System.Text;
+using System.Text.Json;
 using EveShipFit.EsfFormat;
 using EveShipFit.EsfFormat.Tests;
 
@@ -10,8 +11,22 @@ using var input = new MemoryStream();
 Console.OpenStandardInput().CopyTo(input);
 try
 {
-    var fits = Esf.Load(input.ToArray(), catalog);
     using var output = Console.OpenStandardOutput();
+    if (command == "extra")
+    {
+        foreach (var extra in Esf.LoadDocument(input.ToArray(), catalog).Extra)
+        {
+            var line = extra switch
+            {
+                TextExtra text => JsonSerializer.Serialize(new { name = text.Name, version = text.Version, text = text.Text }),
+                BinaryExtra binary => JsonSerializer.Serialize(new { field = binary.Field, bytes = Esf.ToBase64Url(binary.Bytes) }),
+                _ => throw new InvalidOperationException(),
+            };
+            output.Write(Encoding.UTF8.GetBytes(line + "\n"));
+        }
+        return 0;
+    }
+    var fits = Esf.Load(input.ToArray(), catalog);
     if (command == "canonical")
     {
         output.Write(Encoding.UTF8.GetBytes(Esf.Save(fits, catalog)));

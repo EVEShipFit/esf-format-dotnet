@@ -54,6 +54,39 @@ Catch a subclass to handle one kind of error:
 | `EsfCatalogException` | The catalog does not know a name or ID, or a name matches more than one type. |
 | `EsfRuleException` | The fit breaks a rule, like a module in the wrong rack. |
 
+## Other data in a document
+
+Other formats, like a fleet, can share a document with fits. `Load()` skips
+that data. `LoadDocument()` hands it back:
+
+```csharp
+EsfDocument document = Esf.LoadDocument(data, catalog);
+IReadOnlyList<EsfFit> fits = document.Fits; // what Load() returns
+foreach (var extra in document.Extra) // in document order
+{
+    switch (extra)
+    {
+        case TextExtra text: // a text block like %fleet/1
+            Console.WriteLine($"{text.Name}/{text.Version}: {text.Text}");
+            break;
+        case BinaryExtra binary: // a binary Document field other than the fits
+            Console.WriteLine($"field {binary.Field}: {binary.Bytes.Length} bytes");
+            break;
+    }
+}
+```
+
+`TextExtra.Text` is the block after its header line, exactly as written.
+`BinaryExtra` is only for fields that hold bytes; other fields are skipped.
+
+To save other data with fits, append it yourself. In text, add your block after
+the output of `Save()`. In binary, add `Esf.BinaryField()` after the output of
+`SaveBinary()`:
+
+```csharp
+byte[] data = [.. Esf.SaveBinary(fits, catalog), .. Esf.BinaryField(2, fleetBytes)];
+```
+
 ## Fits
 
 An `EsfFit` is one fit: `Hull`, `Name`, tactical `Mode` and its `Entries`.
@@ -138,7 +171,7 @@ Only a ship, structure or container can be a fit's hull. Check
 The test cases live in [esf-format](https://github.com/EVEShipFit/esf-format):
 
 ```
-git clone --branch v1.0 https://github.com/EVEShipFit/esf-format
+git clone --branch v1.3 https://github.com/EVEShipFit/esf-format
 dotnet build tests/EsfFormat.Program -c Release
 uv run --project esf-format/tools esf-test -- dotnet tests/EsfFormat.Program/bin/Release/net10.0/esf-program.dll
 dotnet format --verify-no-changes

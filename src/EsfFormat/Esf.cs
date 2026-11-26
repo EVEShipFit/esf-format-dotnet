@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Unicode;
 using EveShipFit.EsfFormat.Internal;
@@ -7,6 +8,8 @@ namespace EveShipFit.EsfFormat;
 /// <summary>Read and write esf/1 (https://github.com/EVEShipFit/esf-format).</summary>
 public static class Esf
 {
+    private const uint MaxField = (1u << 29) - 1;
+
     /// <summary>Whether a document is text, by its first character (§10).</summary>
     public static bool IsText(ReadOnlySpan<byte> data) => data is [(byte)'%' or (byte)' ', ..];
 
@@ -15,31 +18,41 @@ public static class Esf
 
     /// <summary>Read a text or binary document, in canonical form.</summary>
     /// <exception cref="EsfException">The document breaks a rule of esf/1.</exception>
-    public static IReadOnlyList<EsfFit> Load(ReadOnlySpan<byte> data, ICatalog catalog)
-    {
-        ArgumentNullException.ThrowIfNull(catalog);
-        if (data.IsEmpty)
-        {
-            throw new EsfFormatException("the document is empty");
-        }
-        var fits = IsText(data)
-            ? Canonical(Text.Parse(Decode(data)), catalog)
-            : Checked(Binary.Decode(data), catalog);
-        return fits.ConvertAll(Internal.Canonical.ToModel);
-    }
+    public static IReadOnlyList<EsfFit> Load(ReadOnlySpan<byte> data, ICatalog catalog) => Read(data, catalog, null);
 
     /// <summary>Read a text or binary document, in canonical form.</summary>
     /// <exception cref="EsfException">The document breaks a rule of esf/1.</exception>
-    public static IReadOnlyList<EsfFit> Load(string data, ICatalog catalog)
+    public static IReadOnlyList<EsfFit> Load(string data, ICatalog catalog) => Load(Encode(data), catalog);
+
+    /// <summary>Read a text or binary document: its fits, and the data that is not a fit.</summary>
+    /// <remarks>
+    /// <para>
+    /// The fits are the same as <see cref="Load(ReadOnlySpan{byte}, ICatalog)"/> returns. Load skips other
+    /// data; this method returns it in <see cref="EsfDocument.Extra"/>, in document order.
+    /// </para>
+    /// <para>
+    /// In a text document, that is each block whose header is not <c>%esf/N</c>, as a <see cref="TextExtra"/>.
+    /// In a binary document, it is each field of <c>Document</c> other than the fits that holds bytes, as a
+    /// <see cref="BinaryExtra"/>. A binary field of any other wire type is still skipped.
+    /// </para>
+    /// <para>A <c>%esf/N</c> header with a version other than 1 is an error, as with Load.</para>
+    /// </remarks>
+    /// <exception cref="EsfException">
+    /// The document breaks a rule of esf/1, or the version in a block's header is more than <see cref="uint.MaxValue"/>.
+    /// </exception>
+    public static EsfDocument LoadDocument(ReadOnlySpan<byte> data, ICatalog catalog)
     {
-        ArgumentNullException.ThrowIfNull(data);
-        var bytes = new byte[Encoding.UTF8.GetMaxByteCount(data.Length)];
-        if (Utf8.FromUtf16(data, bytes, out _, out var written, replaceInvalidSequences: false) != System.Buffers.OperationStatus.Done)
-        {
-            throw new EsfFormatException("not valid UTF-8");
-        }
-        return Load(bytes.AsSpan(0, written), catalog);
+        var extra = new List<Extra>();
+        var fits = Read(data, catalog, extra);
+        return new EsfDocument { Fits = fits, Extra = extra };
     }
+
+    /// <summary>Read a text or binary document: its fits, and the data that is not a fit.</summary>
+    /// <remarks>See <see cref="LoadDocument(ReadOnlySpan{byte}, ICatalog)"/>.</remarks>
+    /// <exception cref="EsfException">
+    /// The document breaks a rule of esf/1, or the version in a block's header is more than <see cref="uint.MaxValue"/>.
+    /// </exception>
+    public static EsfDocument LoadDocument(string data, ICatalog catalog) => LoadDocument(Encode(data), catalog);
 
     /// <summary>Write fits as canonical text (§8).</summary>
     /// <exception cref="EsfException">A fit breaks a rule of esf/1.</exception>
@@ -50,6 +63,26 @@ public static class Esf
     /// <exception cref="EsfException">A fit breaks a rule of esf/1.</exception>
     public static byte[] SaveBinary(IReadOnlyList<EsfFit> fits, ICatalog catalog) =>
         Binary.Encode(Checked(fits, catalog).Select(Internal.Canonical.ToModel));
+
+    /// <summary>One field of a binary document, to append to what <see cref="SaveBinary"/> returns.</summary>
+    /// <remarks>
+    /// <para>
+    /// A binary document is a list of fields, and two documents joined end to end are one document. So
+    /// <c>[.. Esf.SaveBinary(fits, catalog), .. Esf.BinaryField(2, bytes)]</c> is a document that holds the fits and
+    /// this field. <see cref="LoadDocument(ReadOnlySpan{byte}, ICatalog)"/> reads it back as a
+    /// <see cref="BinaryExtra"/> with the same <paramref name="field"/> and <paramref name="bytes"/>.
+    /// </para>
+    /// <para>Field 1 holds the fits, so pick a number that esf/1 does not use.</para>
+    /// </remarks>
+    /// <param name="field">The field number: at least 2, and at most 536,870,911, the largest Protocol Buffers allows.</param>
+    /// <param name="bytes">The content of the field.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="field"/> is 0, 1 or more than 536,870,911.</exception>
+    public static byte[] BinaryField(uint field, ReadOnlySpan<byte> bytes)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(field, 2u);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(field, MaxField);
+        return Binary.Field((int)field, bytes);
+    }
 
     /// <summary>The binary form as base64url without padding, for URLs (§10.4).</summary>
     public static string ToBase64Url(ReadOnlySpan<byte> data) =>
@@ -74,6 +107,45 @@ public static class Esf
     {
         ArgumentNullException.ThrowIfNull(name);
         return Names.Fold(name);
+    }
+
+    private static List<EsfFit> Read(ReadOnlySpan<byte> data, ICatalog catalog, List<Extra>? extra)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+        if (data.IsEmpty)
+        {
+            throw new EsfFormatException("the document is empty");
+        }
+        List<CanonFit> fits;
+        if (IsText(data))
+        {
+            var others = extra is null ? null : new List<OtherBlock>();
+            fits = Canonical(Text.Parse(Decode(data), others), catalog);
+            extra?.AddRange(others!.Select(TextExtra));
+        }
+        else
+        {
+            var others = extra is null ? null : new List<BinaryExtra>();
+            fits = Checked(Binary.Decode(data, others), catalog);
+            extra?.AddRange(others!);
+        }
+        return fits.ConvertAll(Internal.Canonical.ToModel);
+    }
+
+    private static TextExtra TextExtra(OtherBlock block) =>
+        uint.TryParse(block.Version, NumberStyles.None, CultureInfo.InvariantCulture, out var version)
+            ? new TextExtra(block.Name, version, block.Text)
+            : throw new EsfFormatException($"the version of %{block.Name} is too large", block.Line);
+
+    private static ReadOnlySpan<byte> Encode(string data)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        var bytes = new byte[Encoding.UTF8.GetMaxByteCount(data.Length)];
+        if (Utf8.FromUtf16(data, bytes, out _, out var written, replaceInvalidSequences: false) != System.Buffers.OperationStatus.Done)
+        {
+            throw new EsfFormatException("not valid UTF-8");
+        }
+        return bytes.AsSpan(0, written);
     }
 
     private static bool IsBase64Url(string encoded)
